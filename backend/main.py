@@ -1,21 +1,29 @@
 # backend/main.py
+import os
+import sys
+
+# Add the current directory to sys.path to ensure local imports work
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine, Base
-from .auth import router as auth_router
-from .profile_router import router as profile_router
-from .report_router import router as report_router
-from .security_router import router as security_router
-from .feedback_router import router as feedback_router
-from .owner_router import router as owner_router
-from . import query_service, dashboard_service  
-from . import models  
+from database import engine, Base
+from auth import router as auth_router
+from profile_router import router as profile_router
+from report_router import router as report_router
+from security_router import router as security_router
+from feedback_router import router as feedback_router
+from owner_router import router as owner_router
+import query_service, dashboard_service  
+import models  
 import os
 import time
 from fastapi import Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from .audit_logger import audit_logger
+from audit_logger import audit_logger
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 

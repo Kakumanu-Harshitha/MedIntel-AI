@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
-from .models import User, UserFeedback
-from .database import get_db
+from models import User, UserFeedback
+from database import get_db
 from sqlalchemy.orm import Session
-from .audit_logger import audit_logger
-from .schemas import FeedbackIn
+from audit_logger import audit_logger
+from schemas import FeedbackIn
 from typing import Optional
 from jose import jwt, JWTError
 import os

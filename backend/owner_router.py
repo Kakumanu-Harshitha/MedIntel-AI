@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_, or_, String
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
-from .database import get_db
-from .models import User, UserFeedback, AuditLog, SystemConfig
-from .auth import get_current_owner
-from .audit_logger import audit_logger
+from database import get_db
+from models import User, UserFeedback, AuditLog, SystemConfig
+from auth import get_current_owner
+from audit_logger import audit_logger
 
 router = APIRouter(prefix="/owner", tags=["Owner Dashboard"])
 

@@ -1,10 +1,18 @@
 # backend/dashboard_service.py
+import os
+import sys
+
+# Ensure the backend directory is in the python path for local imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 from fastapi import APIRouter, Depends
 from typing import List, Dict, Any
-from .mongo_memory import get_full_history_for_dashboard, clear_user_memory
-from .auth import get_current_user
-from .models import User, AuditLog
-from .database import get_db
+from mongo_memory import get_full_history_for_dashboard, clear_user_memory
+from auth import get_current_user
+from models import User, AuditLog
+from database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 

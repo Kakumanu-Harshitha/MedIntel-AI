@@ -1,19 +1,28 @@
 # backend/auth.py
 import os
+import sys
+
+# Ensure the backend directory is in the python path for local imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import jwt, JWTError
+from fastapi.security import OAuth2PasswordRequestForm
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 load_dotenv()
-from .database import get_db
-from .models import User
-from .schemas import TokenOut, UserCreate, RefreshTokenIn, ForgotPasswordRequest, PasswordResetConfirm
-from .audit_logger import audit_logger
-from .email_service import email_service
-from .models import PasswordResetToken
+from database import get_db
+from models import User, PasswordResetToken
+from schemas import TokenOut, UserCreate, RefreshTokenIn, ForgotPasswordRequest, PasswordResetConfirm
+from audit_logger import audit_logger
+from email_service import email_service
+from auth.jwt_handler import create_access_token, create_refresh_token, verify_token
+from auth.user_auth import get_current_user, get_current_owner
+from auth.oauth_config import oauth2_scheme
 import secrets
 import hashlib
 
@@ -27,20 +36,6 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    # Ensure role is included if present in data
-    to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def create_refresh_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 @router.post("/signup", response_model=TokenOut)
 async def signup(payload: UserCreate, request: Request, db: Session = Depends(get_db)):
@@ -169,28 +164,7 @@ async def refresh_token(payload: RefreshTokenIn, request: Request, db: Session =
         "email": user.email
     }
 
-# Dependency to get user object from token
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    user = db.query(User).filter(User.email == email).first()
-    if user is None:
-        raise credentials_exception
-    return user
 
-async def get_current_owner(current_user: User = Depends(get_current_user)):
-    if current_user.role != "OWNER":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="You do not have permission to access this resource."
-        )
-    return current_user
 
 @router.post("/logout")
 async def logout(request: Request, current_user: User = Depends(get_current_user)):

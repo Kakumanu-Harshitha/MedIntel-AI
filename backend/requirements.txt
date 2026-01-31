@@ -24,3 +24,7 @@ timm
 pyotp
 qrcode
 cryptography
+PyMuPDF
+slowapi
+opencv-python
+easyocr

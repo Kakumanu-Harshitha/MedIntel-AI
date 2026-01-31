@@ -24,7 +24,7 @@ else:
     print("⚠️ WARNING: MONGO_URI not found! Memory service disabled.")
 
 
-def store_message(user_id: str, role: str, content: str) -> str:
+def store_message(user_id: str, role: str, content: str, audio_url: str = None) -> str:
     """Stores a message in the user's conversation history. Returns the string ID."""
     if memory_collection is None: return None
     try:
@@ -32,6 +32,7 @@ def store_message(user_id: str, role: str, content: str) -> str:
             "user_id": user_id,
             "role": role,
             "content": content,
+            "audio_url": audio_url,
             "timestamp": datetime.now(timezone.utc)
         })
         return str(result.inserted_id)
@@ -72,7 +73,7 @@ def get_user_memory(user_id: str, limit: int = 10) -> list:
         # Retrieve the most recent messages first to apply the limit correctly
         messages = list(memory_collection.find(
             {"user_id": user_id},
-            {"_id": 0, "role": 1, "content": 1} 
+            {"_id": 0, "role": 1, "content": 1, "audio_url": 1} 
         ).sort("timestamp", -1).limit(limit))
         
         # Reverse the results so they are in chronological order (Oldest -> Newest)

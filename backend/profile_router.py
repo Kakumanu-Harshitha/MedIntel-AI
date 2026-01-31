@@ -1,14 +1,22 @@
 # backend/profile_router.py
+import os
+import sys
+
+# Ensure the backend directory is in the python path for local imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
-from .database import get_db
-from .models import Profile
-from .schemas import ProfileIn, ProfileOut
-from .auth import get_current_user
-from .models import User as SQLUser  # for typing
-from .audit_logger import audit_logger
+from database import get_db
+from models import Profile
+from schemas import ProfileIn, ProfileOut
+from auth import get_current_user
+from models import User as SQLUser  # for typing
+from audit_logger import audit_logger
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
 @router.post("/", response_model=ProfileOut, response_model_exclude_none=True)

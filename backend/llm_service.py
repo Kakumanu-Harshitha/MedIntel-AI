@@ -1,5 +1,12 @@
 # backend/llm_service.py
 import os
+import sys
+
+# Ensure the backend directory is in the python path for local imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 import json
 import groq
 from typing import Any
@@ -7,14 +14,14 @@ from groq import AsyncGroq
 from dotenv import load_dotenv
 from fastapi import Request
 from sqlalchemy.orm import Session
-from .database import SessionLocal
-from .models import SystemConfig
-from .schemas import RiskAssessment, Explanation, Recommendations, HealthReport
-from . import mongo_memory
-from .rag_service import rag_service
-from .structured_memory import structured_memory
-from .rag_router import rag_router, QueryIntent, DatasetType
-from .audit_logger import audit_logger
+from database import SessionLocal
+from models import SystemConfig
+from schemas import RiskAssessment, Explanation, Recommendations, HealthReport
+import mongo_memory
+from rag_service import rag_service
+from structured_memory import structured_memory
+from rag_router import rag_router, QueryIntent, DatasetType
+from audit_logger import audit_logger
 
 load_dotenv()
 
@@ -271,6 +278,31 @@ OUTPUT FORMAT (JSON):
   "questions": ["Question 1", "Question 2"] (only if needs_clarification is true),
   "detected_intent": "informational" | "symptom_based"
 }
+"""
+
+PROMPT_DISEASE_SPELLING_NORMALIZATION = """
+You are a medical spelling normalization assistant. 
+Your task is to identify and correct potentially misspelled medical condition names.
+
+RULES:
+1. Use ONLY for language/spelling correction. 
+2. NEVER perform medical inference or diagnosis.
+3. If the input looks like a misspelled disease or medical condition, provide the top 1-3 correct candidates.
+4. If the spelling is already correct, return it as the primary candidate.
+5. If the input is not a medical condition or is too ambiguous, return an empty list.
+6. NEVER invent or assume a disease name that does not exist in standard medical terminology.
+7. Return ONLY the JSON object. No explanations.
+
+OUTPUT FORMAT (JSON):
+{
+  "candidates": ["candidate 1", "candidate 2", "candidate 3"],
+  "is_misspelled": boolean
+}
+
+EXAMPLES:
+User: "diabtes" -> {"candidates": ["diabetes", "diabetes mellitus"], "is_misspelled": true}
+User: "wilson disease" -> {"candidates": ["Wilson disease"], "is_misspelled": false}
+User: "qwertyuiop" -> {"candidates": [], "is_misspelled": false}
 """
 
 PROMPT_MEMORY_SELECTOR = """
@@ -743,6 +775,121 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
         
         print(f"🎯 RAG Router detected intent: {intent_enum.name} -> {detected_intent}")
         
+        # --- STEP 3.1: SPELLING TOLERANT DISEASE NAME HANDLING ---
+        # If intent is DISEASE_QUERY, run spelling normalization and database validation
+        if intent_enum == QueryIntent.DISEASE_QUERY and user_confirmation == "skip":
+            print(f"🔍 Running spelling normalization for disease query: {combined_input}")
+            
+            # 1. LLM spelling normalization
+            spelling_content = await call_llm_with_fallback(
+                messages=[
+                    {"role": "system", "content": PROMPT_DISEASE_SPELLING_NORMALIZATION},
+                    {"role": "user", "content": f"User Input: {combined_input}"}
+                ],
+                response_format={"type": "json_object"},
+                use_primary=False, # Spelling is simple
+                allow_fallback=use_llm_fallback
+            )
+            
+            try:
+                spelling_data = json.loads(spelling_content)
+                candidates = spelling_data.get("candidates", [])
+                
+                if candidates:
+                    valid_candidates = []
+                    # 2. Database-First Validation
+                    for candidate in candidates:
+                        # Search RAG with candidate name and restrict to medical datasets
+                        # Use top_k=3 to verify existence and quality
+                        search_results = rag_service.search(candidate, top_k=3)
+                        
+                        # Filter to trusted medical datasets
+                        medical_docs = rag_router.filter_results_by_dataset(
+                            search_results, 
+                            [DatasetType.ICD11, DatasetType.MEDLINEPLUS, DatasetType.WHO_NHS, DatasetType.PUBMED]
+                        )
+                        
+                        # Check if candidate matches a title or has high confidence in trusted sources
+                        is_valid = False
+                        for doc in medical_docs:
+                            # Strict match: title contains candidate or score is very high
+                            if candidate.lower() in doc['title'].lower() or doc['score'] > 0.6:
+                                is_valid = True
+                                break
+                        
+                        if is_valid:
+                            valid_candidates.append(candidate)
+                    
+                    # 3. Handle validation results
+                    if not valid_candidates:
+                        # No valid match -> safe clarification
+                        await audit_logger.log_event(
+                            action="DISEASE_CORRECTION",
+                            status="FAILURE",
+                            user_id=user_id,
+                            request=request,
+                            metadata={"original": combined_input, "candidates": candidates, "reason": "No valid DB matches"}
+                        )
+                        return json.dumps({
+                            "type": "health_report",
+                            "health_information": "I couldn’t find a medical condition matching that name. Please check the spelling or describe your symptoms instead.",
+                            "possible_conditions": [],
+                            "reasoning_brief": "No verified medical match found in databases.",
+                            "recommended_next_steps": "Check the spelling or describe symptoms.",
+                            "ai_confidence": "Low",
+                            "trusted_sources": [],
+                            "disclaimer": "This system only provides information on verified medical conditions."
+                        })
+                    
+                    elif len(valid_candidates) > 1:
+                        # Multiple valid -> ask user to confirm
+                        await audit_logger.log_event(
+                            action="DISEASE_CORRECTION",
+                            status="SUCCESS",
+                            user_id=user_id,
+                            request=request,
+                            metadata={"original": combined_input, "candidates": valid_candidates, "confirmation_required": True}
+                        )
+                        return json.dumps({
+                            "type": "clarification_questions",
+                            "context": f"I found multiple matches for '{combined_input}'. Did you mean:",
+                            "questions": [f"Did you mean {c}?" for c in valid_candidates[:3]],
+                            "requires_confirmation": True
+                        })
+                    
+                    else:
+                        # Single valid match -> continue with corrected name
+                        corrected_name = valid_candidates[0]
+                        print(f"✅ Disease name corrected and verified: {combined_input} -> {corrected_name}")
+                        
+                        await audit_logger.log_event(
+                            action="DISEASE_CORRECTION",
+                            status="SUCCESS",
+                            user_id=user_id,
+                            request=request,
+                            metadata={"original": combined_input, "corrected": corrected_name, "confirmation_required": False}
+                        )
+                        
+                        # Use the corrected name for the rest of the pipeline
+                        combined_input = f"Tell me about {corrected_name}"
+                
+                else:
+                    # No candidates from LLM -> safe clarification
+                    print("⚠️ No spelling candidates found for query")
+                    return json.dumps({
+                        "type": "health_report",
+                        "health_information": "I couldn’t find a medical condition matching that name. Please check the spelling or describe your symptoms instead.",
+                        "possible_conditions": [],
+                        "reasoning_brief": "Query does not appear to be a recognized medical condition.",
+                        "recommended_next_steps": "Check the spelling or describe symptoms.",
+                        "ai_confidence": "Low",
+                        "trusted_sources": [],
+                        "disclaimer": "This system only provides information on verified medical conditions."
+                    })
+                    
+            except json.JSONDecodeError:
+                print(f"⚠️ Spelling Normalization JSON Error: {spelling_content}")
+
         # Also run LLM controller for clarification decision (but use router intent)
         if is_report_analysis:
             # Skip controller for report analysis - go straight to retrieval

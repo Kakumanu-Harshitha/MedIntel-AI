@@ -23,3 +23,5 @@ pyotp
 qrcode
 cryptography
 slowapi
+opencv-python
+easyocr

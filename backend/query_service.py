@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Ensure the backend directory is in the python path for local imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 import json
 from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException, Request
 from typing import Optional, List
@@ -5,13 +13,13 @@ from PIL import Image
 import open_clip
 import torch
 from sqlalchemy.orm import Session
-from . import mongo_memory
-from . import llm_service
-from . import speech_service
-from .report_processor import report_processor
-from .auth import get_current_user
-from .models import User, Profile, SystemConfig
-from .database import get_db
+import mongo_memory
+import llm_service
+import speech_service
+from report_processor import report_processor
+from auth import get_current_user
+from models import User, Profile, SystemConfig
+from database import get_db
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -243,7 +251,7 @@ async def handle_multimodal_query(
 
     # 8. Store the conversation
     mongo_memory.store_message(user_id_str, "user", final_prompt)
-    query_id = mongo_memory.store_message(user_id_str, "assistant", text_response)
+    query_id = mongo_memory.store_message(user_id_str, "assistant", text_response, audio_url=audio_url)
 
     # 9. Return all relevant data to the frontend
     return {

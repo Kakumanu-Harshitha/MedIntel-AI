@@ -11,25 +11,31 @@ class EmailService:
         self.smtp_server = "smtp.gmail.com"
         self.smtp_port = 587
         self.sender_email = os.getenv("GMAIL_SENDER_EMAIL")
-        self.sender_password = os.getenv("GMAIL_APP_PASSWORD")
+        self.sender_password = os.getenv("GMAIL_APP_PASSWORD", "").replace(" ", "")
         self.frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     def send_password_reset_email(self, target_email: str, token: str):
         """
         Sends a secure password reset link via Gmail SMTP.
         """
-        if not self.sender_email or not self.sender_password:
-            print("⚠️ WARNING: Gmail credentials missing. Cannot send email.")
+        # Reload credentials from environment to catch changes without restart
+        load_dotenv()
+        sender_email = os.getenv("GMAIL_SENDER_EMAIL")
+        sender_password = os.getenv("GMAIL_APP_PASSWORD", "").replace(" ", "")
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+        if not sender_email or not sender_password:
+            print("⚠️ WARNING: Gmail credentials missing in .env. Cannot send email.")
             return False
 
         try:
             # 1. Create message
             message = MIMEMultipart("alternative")
             message["Subject"] = "Password Reset Request - AI Health Assistant"
-            message["From"] = f"AI Health Assistant <{self.sender_email}>"
+            message["From"] = f"AI Health Assistant <{sender_email}>"
             message["To"] = target_email
 
-            reset_link = f"{self.frontend_url}/reset-password?token={token}"
+            reset_link = f"{frontend_url}/reset-password?token={token}"
 
             # 2. Email Body (Non-technical & Clear)
             text = f"""
@@ -81,8 +87,8 @@ class EmailService:
             # 4. Connect and send
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()  # Secure the connection
-                server.login(self.sender_email, self.sender_password)
-                server.sendmail(self.sender_email, target_email, message.as_string())
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, target_email, message.as_string())
             
             print(f"📧 Password reset email sent to {target_email}")
             return True

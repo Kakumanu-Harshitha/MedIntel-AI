@@ -79,8 +79,9 @@ class HealthReport(BaseModel):
 
 # --- TOTP / Password Change Schemas ---
 class TOTPInitOut(BaseModel):
-    qr_code: str # Base64 encoded PNG
-    expires_at: datetime
+    qr_code: Optional[str] = None # Base64 encoded PNG
+    otp_enabled: bool
+    expires_at: Optional[datetime] = None
 
 class TOTPVerifyIn(BaseModel):
     otp: str
@@ -95,12 +96,3 @@ class ForgotPasswordRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str
-
-# --- Feedback Schemas ---
-class FeedbackIn(BaseModel):
-    query_id: Optional[str] = None
-    helpful: bool
-    reason: Optional[str] = None
-    comment: Optional[str] = None
-    model_used: Optional[str] = None
-    confidence_score: Optional[float] = None

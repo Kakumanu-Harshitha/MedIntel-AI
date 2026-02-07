@@ -26,7 +26,7 @@ if not all([
 
 engine = create_engine(
     DATABASE_URL,
-    echo=False,
+    echo=True,
     pool_pre_ping=True
 )
 

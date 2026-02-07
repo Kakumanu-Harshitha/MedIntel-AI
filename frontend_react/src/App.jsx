@@ -6,22 +6,11 @@ import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports';
 import ResetPassword from './pages/ResetPassword';
-import OwnerLogin from './pages/OwnerLogin';
-import OwnerDashboard from './pages/OwnerDashboard';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   if (!token) {
     return <Navigate to="/login" replace />;
-  }
-  return children;
-};
-
-const OwnerRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('role');
-  if (!token || role !== 'OWNER') {
-    return <Navigate to="/owner/login" replace />;
   }
   return children;
 };
@@ -33,17 +22,6 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        
-        {/* Owner Routes */}
-        <Route path="/owner/login" element={<OwnerLogin />} />
-        <Route 
-          path="/owner/dashboard" 
-          element={
-            <OwnerRoute>
-              <OwnerDashboard />
-            </OwnerRoute>
-          } 
-        />
         
         {/* Assessment / Chat Route */}
         <Route

@@ -7,18 +7,20 @@ load_dotenv()
 
 # Global flags
 RAG_ENABLED = False
-EMBEDDING_MODEL = None
+_EMBEDDING_MODEL = None
 PINECONE_INDEX = None
 
 try:
     from pinecone import Pinecone, ServerlessSpec
     from sentence_transformers import SentenceTransformer
     
-    # 1. Initialize Embedding Model
-    # We use all-mpnet-base-v2 which provides 768 dimensions to match the index.
-    print("⏳ Loading RAG Embedding Model (all-mpnet-base-v2)...")
-    EMBEDDING_MODEL = SentenceTransformer('all-mpnet-base-v2')
-    print("✅ RAG Embedding Model loaded.")
+    def get_embedding_model():
+        global _EMBEDDING_MODEL
+        if _EMBEDDING_MODEL is None:
+            print("⏳ Loading RAG Embedding Model (all-mpnet-base-v2)...")
+            _EMBEDDING_MODEL = SentenceTransformer('all-mpnet-base-v2')
+            print("✅ RAG Embedding Model loaded.")
+        return _EMBEDDING_MODEL
 
     # 2. Initialize Pinecone
     api_key = os.getenv("PINECONE_API_KEY")
@@ -58,14 +60,18 @@ except Exception as e:
 class RAGService:
     def __init__(self):
         self.enabled = RAG_ENABLED
-        self.model = EMBEDDING_MODEL
         self.index = PINECONE_INDEX
         self.mock_mode = (PINECONE_INDEX is None)
 
+    @property
+    def model(self):
+        return get_embedding_model()
+
     def get_embedding(self, text: str) -> List[float]:
-        if not self.model:
+        model = self.model
+        if not model:
             return []
-        return self.model.encode(text).tolist()
+        return model.encode(text).tolist()
 
     def upsert_document(self, doc_id: str, text: str, metadata: Dict[str, Any]):
         """

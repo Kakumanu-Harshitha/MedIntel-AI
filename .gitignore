@@ -3,6 +3,24 @@
 
 # Python virtual environment
 health/
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
 
 # React dependencies
 frontend_react/node_modules/
+dist/
+build/
+
+# Audio files
+backend/static/audio/*.mp3
+backend/static/audio/*.wav
+
+# Logs
+*.log
+audit_logs/

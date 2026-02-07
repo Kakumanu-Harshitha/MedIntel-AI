@@ -46,57 +46,90 @@ const Reports = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-50 via-white to-navy-50 flex flex-col font-sans">
       <Header />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            Health Reports History
-          </h1>
-          <p className="text-gray-500 mt-1">
-            View your past AI health assessments and recommendations.
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-12">
+        <div className="mb-12 animate-fade-in">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-brand-600 rounded-2xl text-white shadow-lg shadow-brand-600/20">
+              <FileText className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold text-navy-900 tracking-tight">Report History</h1>
+              <p className="text-navy-400 font-bold text-xs uppercase tracking-widest mt-1">
+                Your clinical assessment records
+              </p>
+            </div>
+          </div>
+          <p className="text-navy-500 text-lg max-w-2xl leading-relaxed">
+            Access and manage your previous AI health assessments, laboratory analyses, and clinical recommendations.
           </p>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="w-12 h-12 border-4 border-navy-100 border-t-brand-600 rounded-full animate-spin" />
+            <p className="text-navy-400 font-bold text-xs uppercase tracking-widest">Loading Records...</p>
           </div>
         ) : history.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-8 w-8 text-gray-400" />
+          <div className="text-center py-20 bg-white rounded-[2.5rem] border border-navy-100 shadow-premium animate-fade-in">
+            <div className="w-20 h-20 bg-navy-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <FileText className="h-10 w-10 text-navy-200" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">No reports found</h3>
-            <p className="text-gray-500 mt-2">Start a new assessment to generate your first health report.</p>
+            <h3 className="text-xl font-extrabold text-navy-900 mb-2">No Reports Found</h3>
+            <p className="text-navy-400 max-w-xs mx-auto mb-8 font-medium">Start a new session with our AI assistant to generate your first clinical report.</p>
+            <button 
+              onClick={() => window.location.href = '/chat'}
+              className="px-8 py-3.5 bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-all active:scale-95"
+            >
+              Start New Assessment
+            </button>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
+          <div className="grid gap-10">
             {history.map((report, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-1 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                 {/* We can wrap ReportCard or use it directly. 
-                     ReportCard expects 'data' prop. 
-                     Let's add a header to each card showing "Report #X" or date if available.
-                     Since we don't have date in the message content easily (unless we add it), 
-                     we'll just show the card.
-                 */}
-                 <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 rounded-t-xl">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-                        <Clock className="h-4 w-4" />
-                        <span>Past Report</span>
+              <div key={idx} className="group relative">
+                <div className="absolute -left-4 top-0 bottom-0 w-1 bg-navy-100 rounded-full group-hover:bg-brand-500 transition-colors" />
+                <div className="flex items-center justify-between mb-4 px-2">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-navy-50 rounded-xl text-navy-400">
+                            <Calendar className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-bold text-navy-900">Record #{history.length - idx}</span>
                     </div>
-                    <span className="text-xs font-mono text-gray-400">ID: {history.length - idx}</span>
-                 </div>
-                 <div className="p-4">
+                    <div className="flex items-center gap-2 text-[10px] font-extrabold text-navy-300 uppercase tracking-widest">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Archived Report</span>
+                    </div>
+                </div>
+                <div className="transition-all duration-300 hover:translate-x-1">
                     <ReportCard data={report} />
-                 </div>
+                </div>
               </div>
             ))}
           </div>
         )}
       </main>
+
+      <div className="py-12 border-t border-navy-100/50 bg-white/30 backdrop-blur-sm">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-6">
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-navy-300 uppercase tracking-[0.2em]">Data Security</span>
+                    <span className="text-sm font-bold text-navy-900">End-to-End Encrypted</span>
+                </div>
+                <div className="w-px h-8 bg-navy-100" />
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-navy-300 uppercase tracking-[0.2em]">Compliance</span>
+                    <span className="text-sm font-bold text-navy-900">Clinical Grade AI</span>
+                </div>
+            </div>
+            <p className="text-[11px] text-navy-400 font-medium max-w-xs text-center md:text-right">
+                All reports are generated by AI and should be reviewed by a qualified healthcare professional.
+            </p>
+        </div>
+      </div>
     </div>
   );
 };

@@ -7,25 +7,105 @@ This document outlines the architectural design of the AI Health Assistant, a "G
 
 ---
 
-## 1. System Boundaries & Layered Architecture
+## 1. System Diagrams
+
+### 1.1 High-Level Architecture
+```mermaid
+graph TD
+    User([User]) <--> Frontend[React Frontend]
+    Frontend <--> Backend[FastAPI Backend]
+    
+    subgraph Backend Layers
+        Auth[Auth & Security]
+        Query[Query Service]
+        LLM[LLM Reasoning]
+        Storage[Storage Layer]
+    end
+    
+    Backend <--> Auth
+    Backend <--> Query
+    Backend <--> LLM
+    Backend <--> Storage
+    
+    LLM <--> Groq[Groq Llama-3 API]
+    Storage <--> PostgreSQL[(PostgreSQL - Profiles)]
+    Storage <--> MongoDB[(MongoDB - History)]
+```
+
+### 1.2 Routing Graph
+```mermaid
+graph LR
+    subgraph Frontend ["Frontend Routes"]
+        Home["/"]
+        Login["/login"]
+        Chat["/assessment"]
+        Profile["/profile"]
+        Reports["/reports"]
+        OwnerDash["/owner/dashboard"]
+    end
+
+    subgraph Backend ["Backend Endpoints"]
+        AuthAPI["/auth/*"]
+        ProfileAPI["/profile/*"]
+        QueryAPI["/query/*"]
+        ReportAPI["/report/*"]
+        OwnerAPI["/owner/*"]
+        SecurityAPI["/security/*"]
+    end
+
+    Home --> Chat
+    Login --> Chat
+    Chat --> Backend
+    Profile --> Backend
+    Reports --> Backend
+    OwnerDash --> Backend
+```
+
+
+
+### 1.3 Query Processing Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend (FastAPI)
+    participant Q as Query Service
+    participant L as LLM Service
+    participant M as MongoDB
+    participant P as PostgreSQL
+
+    U->>F: Submit Query (Text/Image/Voice)
+    F->>B: POST /query/multimodal
+    B->>Q: Process Input
+    Q->>P: Fetch User Profile
+    Q->>M: Fetch Chat History
+    Q->>L: Generate Health Insight (Prompt Injection)
+    L->>B: Groq API Response (Structured JSON)
+    B->>M: Store Message & Audio URL
+    B->>F: Return JSON + Audio Stream
+    F->>U: Display Report + Play TTS
+```
+
+
+## 2. System Boundaries & Layered Architecture
 
 The system is refactored into distinct layers to ensure separation of concerns, maintainability, and safety.
 
-### 1.1 Input Layer (Frontend + API)
+### 2.1 Input Layer (Frontend + API)
 - **Responsibility:** Captures user intent via Text, Voice (Web Speech API), and Image (Upload).
 - **Components:**
   - React Frontend (`InputArea.jsx`, `Chat.jsx`)
   - FastAPI Endpoints (`query_service.py`)
 - **Normalization:** Voice is transcribed to text; Images are captioned (using BLIP model or LLM vision) to create a unified text-based context.
 
-### 1.2 Profile Layer
+### 2.2 Profile Layer
 - **Responsibility:** Manages static user data (Age, BMI, Chronic Conditions).
 - **Components:**
   - PostgreSQL Database (`Profile` table)
   - `profile_router.py`
 - **Data Contract:** Provides `ProfileDict` to the Reasoning Layer.
 
-### 1.3 History Layer
+### 2.3 History Layer
 - **Responsibility:** Maintains conversation context and detects long-term patterns.
 - **Components:**
   - MongoDB (`Health_Memory` collection)
@@ -34,16 +114,16 @@ The system is refactored into distinct layers to ensure separation of concerns, 
   - Retrieves last N messages.
   - Future state: Summarization and vector search (RAG) for long-term recall.
 
-### 1.4 Reasoning Layer (The Brain)
+### 2.4 Reasoning Layer (The Brain)
 - **Responsibility:** Synthesizes inputs, profile, and history to generate insights.
 - **Components:**
   - `llm_service.py` (Groq/Llama-3 integration)
 - **Key Features:**
   - **Context Injection:** Merges Current Symptoms + Profile + History.
-  - **Structured Output:** Enforces a strict JSON schema (see Section 2).
+  - **Structured Output:** Enforces a strict JSON schema (see Section 3).
   - **Escalation Logic:** Checks history for worsening trends before generating advice.
 
-### 1.5 Safety Layer (Guardrails)
+### 2.5 Safety Layer (Guardrails)
 - **Responsibility:** Intercepts inputs and outputs to prevent harm.
 - **Components:**
   - `guardrails.py` (Mock/Rule-based)
@@ -52,7 +132,7 @@ The system is refactored into distinct layers to ensure separation of concerns, 
   - Force "EMERGENCY" severity if keywords (e.g., "chest pain", "suicide") are detected.
   - Append mandatory disclaimers to all outputs.
 
-### 1.6 Output Layer
+### 2.6 Output Layer
 - **Responsibility:** Presents data to the user in a human-readable and explainable format.
 - **Components:**
   - React UI (`ReportCard.jsx`)
@@ -62,7 +142,7 @@ The system is refactored into distinct layers to ensure separation of concerns, 
   - "Why this advice?" (XAI Panel).
   - Downloadable PDF reports.
 
-### 1.7 Measurement & Evaluation Layer
+### 2.7 Measurement & Evaluation Layer
 - **Responsibility:** Tracks system performance and user satisfaction to enable data-driven improvements.
 - **Components:**
   - `feedback_router.py` (API for user ratings)
@@ -74,7 +154,7 @@ The system is refactored into distinct layers to ensure separation of concerns, 
 
 ---
 
-## 2. AI Confidence & Uncertainty Modeling
+## 3. AI Confidence & Uncertainty Modeling
 
 To adhere to Responsible AI principles, every response includes metadata about the AI's certainty.
 
@@ -108,34 +188,34 @@ To adhere to Responsible AI principles, every response includes metadata about t
 
 ---
 
-## 3. Explainable AI (XAI)
+## 4. Explainable AI (XAI)
 We treat the LLM as a "Glass Box" where possible. The `explanation` field in the response is exposed to the user via an "Analysis Panel" in the UI. This answers:
 1. **Why this severity?** (e.g., "Symptoms have persisted for >3 days")
 2. **Why this advice?** (e.g., "Based on your high BMI, we recommend...")
 
 ---
 
-## 4. Trade-offs & Engineering Decisions
+## 5. Trade-offs & Engineering Decisions
 
-### 4.1 Why LLM-only (No RAG yet)?
+### 5.1 Why LLM-only (No RAG yet)?
 - **Decision:** Use Llama-3 70B with large context window instead of a Vector DB (Pinecone).
 - **Reasoning:** For a single-user session history (< 50 messages), the context window is sufficient and lower latency than RAG. RAG introduces retrieval complexity and potential for "lost in the middle" errors for recent context.
 
-### 4.2 Why MongoDB for History?
+### 5.2 Why MongoDB for History?
 - **Decision:** Store full conversation trees in NoSQL.
 - **Reasoning:** Chat data is unstructured and polymorphic. MongoDB allows flexible schema evolution as we add new metadata (e.g., user feedback ratings) to messages without migrations.
 
-### 4.3 Why React + FastAPI?
+### 5.3 Why React + FastAPI?
 - **Decision:** Decoupled Frontend/Backend.
 - **Reasoning:** Allows independent scaling. FastAPI provides automatic OpenAPI documentation and high-performance async handling for LLM streams. React allows for a rich, interactive "app-like" experience.
 
-### 4.4 Why Safety Overrides AI?
+### 5.4 Why Safety Overrides AI?
 - **Decision:** Hard-coded keyword detection (Rule-based) runs *before* and *after* the LLM.
 - **Reasoning:** LLMs are probabilistic and can be jailbroken. Regular expressions for "suicide" or "heart attack" are deterministic and fail-safe.
 
 ---
 
-## 5. Future Roadmap
+## 6. Future Roadmap
 - **Evaluation Pipeline:** Automated testing using "Golden Datasets" to measure hallucination rates.
 - **RAG Integration:** Connect to a curated medical wiki for citation-backed answers.
 - **Wearable Integration:** Ingest Apple Health / Google Fit data for real-time vitals.

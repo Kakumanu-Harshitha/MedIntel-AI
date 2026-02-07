@@ -1,84 +1,65 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
-from .models import User, UserFeedback
-from .database import get_db
-from sqlalchemy.orm import Session
+from .auth import get_current_user
+from .models import User
+from . import mongo_memory, llm_service
 from .audit_logger import audit_logger
-from .schemas import FeedbackIn
+from pydantic import BaseModel
 from typing import Optional
-from jose import jwt, JWTError
-import os
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = "HS256"
-
-async def get_optional_user(request: Request, db: Session = Depends(get_db)):
-    """
-    Optional user dependency for feedback.
-    If no token or invalid token, returns None (guest).
-    """
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return None
-    
-    token = auth_header.split(" ")[1]
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            return None
-        user = db.query(User).filter(User.email == email).first()
-        return user
-    except (JWTError, Exception):
-        return None
+class FeedbackRequest(BaseModel):
+    rating: str # "positive" or "negative"
+    comment: Optional[str] = None
+    context: Optional[str] = None # Optional context (e.g. summary of the report)
 
 @router.post("/")
 async def submit_feedback(
     request: Request,
-    feedback: FeedbackIn,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user)
+    feedback: FeedbackRequest,
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Submit manual feedback for AI responses.
-    Stores minimal metadata for internal improvement.
-    """
-    # Check for existing feedback to prevent duplicates if query_id is provided
-    if feedback.query_id:
-        existing = db.query(UserFeedback).filter(UserFeedback.query_id == feedback.query_id).first()
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail="Feedback already exists for this query."
+    user_id_str = str(current_user.id)
+    mongo_memory.log_feedback(
+        user_id=user_id_str,
+        rating=feedback.rating,
+        comment=feedback.comment,
+        context=feedback.context
+    )
+    
+    await audit_logger.log_event(
+        action="USER_FEEDBACK",
+        status="SUCCESS",
+        user_id=current_user.id,
+        request=request,
+        metadata={
+            "rating": feedback.rating,
+            "has_comment": bool(feedback.comment),
+            "refinement_triggered": feedback.rating == "negative"
+        }
+    )
+    
+    # If feedback is negative, trigger the Feedback Refiner Stage
+    refinement_insight = None
+    if feedback.rating == "negative" and llm_service.client:
+        try:
+            refiner_response = await llm_service.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": llm_service.PROMPT_FEEDBACK_REFINER.format(
+                        feedback_rating=feedback.rating,
+                        feedback_comment=feedback.comment or "No comment provided."
+                    )}
+                ],
+                model=llm_service.LLM_MODEL
             )
+            refinement_insight = refiner_response.choices[0].message.content
+            # Store refinement insight for developers/admin review
+            mongo_memory.store_message(user_id_str, "system_refinement", refinement_insight)
+        except Exception as e:
+            print(f"⚠️ Feedback Refiner Error: {e}")
 
-    try:
-        new_feedback = UserFeedback(
-            query_id=feedback.query_id,
-            user_id=current_user.id if current_user else None,
-            helpful=1 if feedback.helpful else 0,
-            reason=feedback.reason,
-            comment=feedback.comment,
-            model_used=feedback.model_used,
-            confidence_score=feedback.confidence_score
-        )
-        db.add(new_feedback)
-        db.commit()
-        
-        await audit_logger.log_event(
-            action="USER_FEEDBACK",
-            status="SUCCESS",
-            user_id=current_user.id if current_user else None,
-            request=request,
-            metadata={
-                "helpful": feedback.helpful,
-                "reason": feedback.reason,
-                "has_comment": bool(feedback.comment)
-            }
-        )
-        
-        return {"status": "success", "message": "Thank you for your valuable feedback."}
-    except Exception as e:
-        print(f"❌ Feedback Error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to store feedback.")
+    return {
+        "message": "Feedback received",
+        "refinement_triggered": feedback.rating == "negative",
+        "insight_generated": refinement_insight is not None
+    }

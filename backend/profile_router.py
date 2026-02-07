@@ -4,13 +4,18 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
 from .database import get_db
-from .models import Profile
-from .schemas import ProfileIn, ProfileOut
+from .models import Profile, User as SQLUser  # for typing
 from .auth import get_current_user
-from .models import User as SQLUser  # for typing
 from .audit_logger import audit_logger
+from .schemas import ProfileIn, ProfileOut, TokenOut
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
+
+@router.get("/status")
+def get_auth_status(current_user: SQLUser = Depends(get_current_user)):
+    """Quick check for OTP status without fetching full profile."""
+    return {"otp_enabled": bool(current_user.otp_enabled)}
+
 @router.post("/", response_model=ProfileOut, response_model_exclude_none=True)
 async def create_or_update_profile(
     request: Request,

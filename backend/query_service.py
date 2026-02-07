@@ -10,19 +10,12 @@ from . import llm_service
 from . import speech_service
 from .report_processor import report_processor
 from .auth import get_current_user
-from .models import User, Profile, SystemConfig
+from .models import User, Profile
 from .database import get_db
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address)
-
-# Helper to check feature toggles
-def is_feature_enabled(db: Session, key: str) -> bool:
-    config = db.query(SystemConfig).filter(SystemConfig.key == key).first()
-    if not config:
-        return True # Default to ON if not configured
-    return config.value == "ON"
 
 # --- Router Setup ---
 router = APIRouter(prefix="/query", tags=["Query Service"])
@@ -127,47 +120,65 @@ async def handle_multimodal_query(
 
     # 1. Process Voice Input (if provided)
     if audio_file:
+        print(f"🎤 Processing audio file: {audio_file.filename}")
+        # Seek to start to ensure it's readable
+        audio_file.file.seek(0)
         transcribed_text = speech_service.speech_to_text(audio_file)
         if transcribed_text.startswith("[stt_error]"):
             raise HTTPException(status_code=500, detail=f"Speech-to-Text failed: {transcribed_text}")
-        prompt_parts.append(f"The user said: '{transcribed_text}'.")
+        prompt_parts.append(f"The user said: '{transcribed_text}'")
 
     # 2. Process Image Input (if provided)
+    image_text = None
     if image_file:
-        if not is_feature_enabled(db, "feature_image_analysis"):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Image analysis is currently disabled by system administrator.")
-            
+        print(f"📷 Processing image file: {image_file.filename}")
         if not model or not preprocess or not tokenizer:
             raise HTTPException(status_code=503, detail="Image processing service is currently unavailable.")
-        image = Image.open(image_file.file).convert("RGB")
         
-        # Use MediCLIP for analysis instead of BLIP generation
+        # Seek to start of file to ensure it's readable
+        image_file.file.seek(0)
+        file_bytes = await image_file.read()
+        
+        # 2a. Run MediCLIP for visual classification
+        import io
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
         image_caption = analyze_image_with_mediclip(image)
-        prompt_parts.append(f"The uploaded image analysis suggests: '{image_caption}'.")
+        print(f"📷 Image analysis result: {image_caption}")
+        
+        # 2b. Run OCR to see if it's a medical document
+        # Reset pointer for OCR if it uses file_bytes
+        image_text = report_processor.extract_text_from_image(file_bytes)
+        if image_text:
+            print(f"📷 OCR extracted text from image ({len(image_text)} chars)")
+            prompt_parts.append(f"They also typed/uploaded text: '{image_text[:500]}'")
+        
+        prompt_parts.append(f"The user uploaded an image that looks like: {image_caption}")
 
     # 3. Process Medical Report Input (if provided)
     if report_file:
         print(f"📄 Processing report: {report_file.filename}")
+        # Seek to start to ensure it's readable
+        report_file.file.seek(0)
         file_bytes = await report_file.read()
         report_data = report_processor.process_report(file_bytes, report_file.filename)
         report_text = report_data["content"]
-        print(f"📄 Extracted report text length: {len(report_text)}")
+        print(f"📄 Report processing complete: {len(report_text)} chars extracted.")
         
         # Ensure report_text is never empty if a file was provided
         if not report_text or not report_text.strip():
-            report_text = f"[Medical Report Uploaded: {report_file.filename} - OCR returned no text]"
+            report_text = f"[Medical Report Content Missing: {report_file.filename}]"
             
-        prompt_parts.append(f"USER UPLOADED MEDICAL REPORT ({report_file.filename}).")
+        prompt_parts.append(f"The user uploaded a medical report containing: {report_text}")
 
     # 4. Process Text Input (if provided)
     if text_query.strip():
-        prompt_parts.append(f"They also typed: '{text_query}'.")
+        prompt_parts.append(f"The user's text query is: '{text_query}'")
         
-    # 4. Check if any input was provided
+    # 5. Check if any input was provided
     if not prompt_parts:
         raise HTTPException(status_code=400, detail="No input provided. Please provide text, voice, or an image.")
 
-    # 5. Fetch User Profile
+    # 6. Fetch User Profile
     profile_record = db.query(Profile).filter(Profile.email == current_user.email).first()
     profile_dict = {}
     if profile_record:
@@ -183,7 +194,7 @@ async def handle_multimodal_query(
     else:
         profile_dict = {"user_id": str(current_user.id)}
 
-    # 6. Assemble Inputs and get LLM response
+    # 7. Assemble Inputs and get LLM response
     final_prompt = " ".join(prompt_parts) # Still used for storing simple history
     history = mongo_memory.get_user_memory(user_id_str)
     
@@ -191,6 +202,7 @@ async def handle_multimodal_query(
         "text_query": text_query,
         "transcribed_text": transcribed_text,
         "image_caption": image_caption,
+        "image_text": image_text,
         "report_text": report_text,
         "user_confirmation": user_confirmation
     }
@@ -242,12 +254,13 @@ async def handle_multimodal_query(
         print(f"⚠️ TTS Generation failed: {e}")
 
     # 8. Store the conversation
+    # Use full JSON response for dashboard consistency (styling)
+    # The mongo_memory.get_user_memory will clean it for LLM context
     mongo_memory.store_message(user_id_str, "user", final_prompt)
-    query_id = mongo_memory.store_message(user_id_str, "assistant", text_response)
+    mongo_memory.store_message(user_id_str, "assistant", text_response)
 
     # 9. Return all relevant data to the frontend
     return {
-        "query_id": query_id,
         "text_response": text_response,
         "transcribed_text": transcribed_text,
         "image_caption": image_caption,

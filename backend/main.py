@@ -8,7 +8,6 @@ from .profile_router import router as profile_router
 from .report_router import router as report_router
 from .security_router import router as security_router
 from .feedback_router import router as feedback_router
-from .owner_router import router as owner_router
 from . import query_service, dashboard_service  
 from . import models  
 import os
@@ -26,7 +25,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Create tables
-# Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 # Mount static directory for audio
 static_dir = os.path.join(os.path.dirname(__file__), "static")
@@ -36,10 +35,18 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://[::1]:3000",
+        "http://[::1]:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Audit Logging Middleware
@@ -49,12 +56,11 @@ async def audit_log_middleware(request: Request, call_next):
     response = await call_next(request)
     process_time = time.time() - start_time
     
-    # Log critical or suspicious activities (e.g., 4xx, 5xx errors)
     if response.status_code >= 400:
         # Avoid logging common 404s or 401s if they are already handled in routers
         # but capture 500s and other critical errors
         if response.status_code >= 500:
-             await audit_logger.log_event(
+            await audit_logger.log_event(
                 action="SYSTEM_ERROR",
                 status="FAILURE",
                 request=request,
@@ -74,7 +80,6 @@ app.include_router(profile_router)
 app.include_router(report_router)
 app.include_router(security_router)
 app.include_router(feedback_router)
-app.include_router(owner_router)
 app.include_router(query_service.router)
 app.include_router(dashboard_service.router)
 

@@ -33,7 +33,31 @@ async def initiate_change_password(
     """
     Step 1: Initiate change password flow.
     Reuses existing secret if valid, otherwise generates a new one.
+    If OTP is already setup, does not show QR code.
     """
+    # If user already has OTP enabled, we don't show QR code
+    if current_user.otp_enabled:
+        # We still need a TOTP entry to track verification state for the password change flow
+        db.query(ChangePasswordTOTP).filter(ChangePasswordTOTP.user_id == current_user.id).delete()
+        
+        expires_at = datetime.utcnow() + timedelta(minutes=TOTP_EXPIRY_MINUTES)
+        totp_entry = ChangePasswordTOTP(
+            user_id=current_user.id,
+            secret_encrypted=current_user.otp_secret, # Reuse the permanent secret
+            expires_at=expires_at
+        )
+        db.add(totp_entry)
+        db.commit()
+        
+        await audit_logger.log_event(
+            action="CHANGE_PASSWORD_INITIATED",
+            status="SUCCESS",
+            user_id=current_user.id,
+            request=request,
+            metadata={"otp_already_enabled": True}
+        )
+        return {"qr_code": None, "otp_enabled": True, "expires_at": expires_at}
+
     # Check for an existing unverified request that hasn't expired
     existing_entry = db.query(ChangePasswordTOTP).filter(
         ChangePasswordTOTP.user_id == current_user.id,
@@ -69,10 +93,10 @@ async def initiate_change_password(
         status="SUCCESS",
         user_id=current_user.id,
         request=request,
-        metadata={"reused": existing_entry is not None}
+        metadata={"reused": existing_entry is not None, "otp_already_enabled": False}
     )
     
-    return {"qr_code": qr_base64, "expires_at": expires_at}
+    return {"qr_code": qr_base64, "otp_enabled": False, "expires_at": expires_at}
 
 @router.post("/change-password/verify")
 async def verify_password_change_otp(
@@ -107,6 +131,12 @@ async def verify_password_change_otp(
     secret = TOTPUtility.decrypt_secret(totp_entry.secret_encrypted)
     if TOTPUtility.verify_otp(secret, payload.otp):
         totp_entry.verified = 1
+        
+        # If this was the first time setup, enable OTP for the user permanently
+        if not current_user.otp_enabled:
+            current_user.otp_secret = totp_entry.secret_encrypted
+            current_user.otp_enabled = 1
+        
         db.commit()
         
         await audit_logger.log_event(

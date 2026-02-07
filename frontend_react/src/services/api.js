@@ -96,10 +96,10 @@ export const dashboardService = {
 };
 
 export const feedbackService = {
-  submitFeedback: async (helpful, details = {}) => {
+  submitFeedback: async (rating, context) => {
     const response = await api.post('/feedback/', {
-      helpful,
-      ...details
+      rating,
+      context
     });
     return response.data;
   }
@@ -116,41 +116,6 @@ export const securityService = {
   },
   completeChangePassword: async (newPassword) => {
     const response = await api.post('/security/change-password/complete', { new_password: newPassword });
-    return response.data;
-  }
-};
-
-export const ownerService = {
-  getHealthMetrics: async () => {
-    const response = await api.get('/owner/health-metrics');
-    return response.data;
-  },
-  getSatisfactionMetrics: async () => {
-    const response = await api.get('/owner/satisfaction-metrics');
-    return response.data;
-  },
-  getModelMetrics: async () => {
-    const response = await api.get('/owner/model-metrics');
-    return response.data;
-  },
-  getSecurityMetrics: async () => {
-    const response = await api.get('/owner/security-metrics');
-    return response.data;
-  },
-  getHitlMetrics: async () => {
-    const response = await api.get('/owner/hitl-metrics');
-    return response.data;
-  },
-  getAuditLogs: async (params = {}) => {
-    const response = await api.get('/owner/audit-logs', { params });
-    return response.data;
-  },
-  getToggles: async () => {
-    const response = await api.get('/owner/toggles');
-    return response.data;
-  },
-  updateToggle: async (key, value) => {
-    const response = await api.post(`/owner/toggles?key=${key}&value=${value}`);
     return response.data;
   }
 };

@@ -8,29 +8,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
-    role = Column(String, default="USER") # "USER" or "OWNER"
-    is_active = Column(Integer, default=1) # 1 for True, 0 for False
+    otp_secret = Column(String, nullable=True)  # Encrypted TOTP secret
+    otp_enabled = Column(Integer, default=0)    # 0 for false, 1 for true
     created_at = Column(DateTime, default=datetime.utcnow)
-
-class SystemConfig(Base):
-    __tablename__ = "system_configs"
-    id = Column(Integer, primary_key=True, index=True)
-    key = Column(String, unique=True, index=True, nullable=False) # e.g., "feature_image_analysis"
-    value = Column(String, nullable=False) # "ON" or "OFF"
-    description = Column(String, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class UserFeedback(Base):
-    __tablename__ = "user_feedback"
-    id = Column(Integer, primary_key=True, index=True)
-    query_id = Column(String, index=True, nullable=True) # ID of the AI response/query
-    user_id = Column(Integer, index=True, nullable=True) # Nullable for guest usage
-    helpful = Column(Integer, nullable=False) # 1 for True (👍), 0 for False (👎)
-    reason = Column(String, nullable=True) # "Not accurate", "Not relevant", etc.
-    comment = Column("other_details", String, nullable=True) # Text from "Other" field
-    model_used = Column(String, nullable=True)
-    confidence_score = Column(Float, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"

@@ -1,5 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Send, Mic, Image as ImageIcon, X, Loader2, FileText } from 'lucide-react';
+import { 
+  Send, Mic, Image as ImageIcon, X, Loader2, 
+  FileText, Paperclip, Smile, ShieldCheck 
+} from 'lucide-react';
 import clsx from 'clsx';
 
 const InputArea = ({ onSend, isLoading }) => {
@@ -49,7 +52,6 @@ const InputArea = ({ onSend, isLoading }) => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
-      setReportFile(null); // Clear report if image is selected
     }
   };
 
@@ -57,7 +59,6 @@ const InputArea = ({ onSend, isLoading }) => {
     const file = e.target.files[0];
     if (file) {
       setReportFile(file);
-      setImageFile(null); // Clear image if report is selected
     }
   };
 
@@ -67,7 +68,6 @@ const InputArea = ({ onSend, isLoading }) => {
 
     onSend({ text, audioBlob, imageFile, reportFile });
     
-    // Reset state
     setText('');
     setAudioBlob(null);
     setImageFile(null);
@@ -75,59 +75,59 @@ const InputArea = ({ onSend, isLoading }) => {
   };
 
   return (
-    <div className="bg-white border-t border-gray-100 p-4 sticky bottom-0 z-40">
-      <div className="max-w-3xl mx-auto">
-        {/* Preview Area */}
-        {(audioBlob || imageFile || reportFile) && (
-          <div className="flex gap-2 mb-3 overflow-x-auto">
-            {audioBlob && (
-              <div className="flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full text-sm border border-purple-100">
-                <Mic className="h-3 w-3" />
-                <span>Voice Note Recorded</span>
-                <button onClick={() => setAudioBlob(null)} className="hover:text-purple-900">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-            {imageFile && (
-              <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm border border-blue-100">
-                <ImageIcon className="h-3 w-3" />
-                <span className="max-w-[150px] truncate">{imageFile.name}</span>
-                <button onClick={() => setImageFile(null)} className="hover:text-blue-900">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-            {reportFile && (
-              <div className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-sm border border-green-100">
-                <FileText className="h-3 w-3" />
-                <span className="max-w-[150px] truncate">{reportFile.name}</span>
-                <button onClick={() => setReportFile(null)} className="hover:text-green-900">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+    <div className="bg-white/50 backdrop-blur-xl border border-navy-100 p-2 rounded-[2.5rem] shadow-premium sticky bottom-0 z-40 animate-slide-up">
+      {/* Preview Area */}
+      {(audioBlob || imageFile || reportFile) && (
+        <div className="flex gap-3 p-4 mb-2 overflow-x-auto scrollbar-hide">
+          {audioBlob && (
+            <div className="flex items-center gap-3 bg-brand-50 text-brand-700 px-4 py-2 rounded-2xl text-sm font-bold border border-brand-100 shadow-sm animate-fade-in shrink-0">
+              <div className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
+              <span>Voice Note</span>
+              <button onClick={() => setAudioBlob(null)} className="hover:bg-brand-200 p-1 rounded-lg transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {imageFile && (
+            <div className="flex items-center gap-3 bg-teal-50 text-teal-700 px-4 py-2 rounded-2xl text-sm font-bold border border-teal-100 shadow-sm animate-fade-in shrink-0">
+              <ImageIcon className="h-4 w-4" />
+              <span className="max-w-[120px] truncate">{imageFile.name}</span>
+              <button onClick={() => setImageFile(null)} className="hover:bg-teal-200 p-1 rounded-lg transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {reportFile && (
+            <div className="flex items-center gap-3 bg-navy-50 text-navy-700 px-4 py-2 rounded-2xl text-sm font-bold border border-navy-100 shadow-sm animate-fade-in shrink-0">
+              <FileText className="h-4 w-4" />
+              <span className="max-w-[120px] truncate">{reportFile.name}</span>
+              <button onClick={() => setReportFile(null)} className="hover:bg-navy-200 p-1 rounded-lg transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
-        <form onSubmit={handleSubmit} className="relative flex items-end gap-2 bg-gray-50 p-2 rounded-3xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
-          <div className="flex items-center">
-            <label className="p-3 text-gray-400 hover:text-primary cursor-pointer transition-colors" title="Upload Image (Skin/Physical)">
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              <ImageIcon className="h-5 w-5" />
-            </label>
-            
-            <label className="p-3 text-gray-400 hover:text-primary cursor-pointer transition-colors" title="Upload Medical Report (PDF/Image)">
-              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleReportUpload} />
-              <FileText className="h-5 w-5" />
-            </label>
-          </div>
+      <form onSubmit={handleSubmit} className="relative flex items-center gap-2 p-1">
+        <div className="flex items-center px-2">
+          <label className="p-3 text-navy-400 hover:text-brand-600 hover:bg-brand-50 rounded-2xl cursor-pointer transition-all active:scale-90" title="Upload Image">
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            <ImageIcon className="h-5 w-5" />
+          </label>
+          
+          <label className="p-3 text-navy-400 hover:text-brand-600 hover:bg-brand-50 rounded-2xl cursor-pointer transition-all active:scale-90" title="Upload Report">
+            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleReportUpload} />
+            <FileText className="h-5 w-5" />
+          </label>
+        </div>
 
+        <div className="flex-1 relative">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Describe your symptoms..."
-            className="flex-1 bg-transparent border-0 focus:ring-0 resize-none py-3 max-h-32 min-h-[44px] text-gray-900 placeholder:text-gray-400"
+            placeholder="Describe your symptoms or ask a question..."
+            className="w-full bg-navy-50/50 border border-navy-100/50 rounded-3xl px-6 py-4 pr-12 focus:ring-4 focus:ring-brand-500/5 focus:border-brand-500 focus:bg-white transition-all outline-none text-navy-900 placeholder:text-navy-300 resize-none font-medium leading-relaxed max-h-32 min-h-[56px]"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -136,47 +136,60 @@ const InputArea = ({ onSend, isLoading }) => {
               }
             }}
           />
+          <button
+            type="button"
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-navy-300 hover:text-brand-600 transition-colors"
+          >
+            <Smile className="h-5 w-5" />
+          </button>
+        </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={isRecording ? stopRecording : startRecording}
-              className={clsx(
-                "p-3 rounded-full transition-all duration-200",
-                isRecording 
-                  ? "bg-red-50 text-red-600 animate-pulse" 
-                  : "text-gray-400 hover:text-primary"
-              )}
-              title={isRecording ? "Stop Recording" : "Record Voice"}
-            >
-              <Mic className="h-5 w-5" />
-            </button>
-
-            <button
-              type="submit"
-              disabled={isLoading || (!text.trim() && !audioBlob && !imageFile && !reportFile)}
+        <div className="flex items-center gap-2 pr-1">
+          <button
+            type="button"
+            onClick={isRecording ? stopRecording : startRecording}
             className={clsx(
-              "p-3 rounded-full transition-all duration-200",
+              "p-4 rounded-[1.25rem] transition-all duration-300 shadow-lg active:scale-95",
+              isRecording 
+                ? "bg-red-500 text-white animate-pulse shadow-red-500/20" 
+                : "bg-white border border-navy-100 text-navy-400 hover:text-brand-600 hover:border-brand-100"
+            )}
+            title={isRecording ? "Stop Recording" : "Record Voice"}
+          >
+            <Mic className="h-5 w-5" />
+          </button>
+
+          <button
+            type="submit"
+            disabled={isLoading || (!text.trim() && !audioBlob && !imageFile && !reportFile)}
+            className={clsx(
+              "p-4 rounded-[1.25rem] transition-all duration-300 shadow-xl active:scale-95 group",
               (text.trim() || audioBlob || imageFile || reportFile) && !isLoading
-                ? "bg-primary text-white shadow-md hover:bg-primary/90" 
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                ? "bg-brand-600 text-white shadow-brand-600/20 hover:bg-brand-700" 
+                : "bg-navy-50 text-navy-200 cursor-not-allowed"
             )}
           >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            )}
           </button>
         </div>
       </form>
-      <div className="text-center mt-2">
-         <p className="text-xs text-gray-400">
-          AI can make mistakes. Please consult a doctor for serious concerns.
-        </p>
-        <p className="text-[10px] text-gray-300 mt-1">
-          You may upload lab reports or prescriptions (PDF/Image) to help us understand your condition better.
-        </p>
+      
+      <div className="flex justify-center items-center gap-4 px-6 py-2 mt-1">
+         <p className="text-[10px] font-bold text-navy-300 uppercase tracking-widest flex items-center gap-1.5">
+           <ShieldCheck className="h-3 w-3 text-teal-500" />
+           Clinical Grade AI
+         </p>
+         <div className="w-1 h-1 bg-navy-100 rounded-full" />
+         <p className="text-[10px] font-bold text-navy-300 uppercase tracking-widest">
+           Secure & Private
+         </p>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default InputArea;

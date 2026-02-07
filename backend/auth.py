@@ -32,7 +32,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    # Ensure role is included if present in data
     to_encode.update({"exp": expire, "type": "access"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -55,7 +54,7 @@ async def signup(payload: UserCreate, request: Request, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
     
     hashed_password = pwd_context.hash(payload.password)
-    user = User(email=payload.email, password=hashed_password, role="USER")
+    user = User(email=payload.email, password=hashed_password)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -68,8 +67,8 @@ async def signup(payload: UserCreate, request: Request, db: Session = Depends(ge
         metadata={"email": user.email}
     )
     
-    access_token = create_access_token(data={"sub": user.email, "role": user.role})
-    refresh_token = create_refresh_token(data={"sub": user.email, "role": user.role})
+    access_token = create_access_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email})
     return {
         "access_token": access_token, 
         "refresh_token": refresh_token,
@@ -91,19 +90,16 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password", headers={"WWW-Authenticate": "Bearer"})
     
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated.")
-
     await audit_logger.log_event(
         action="USER_LOGIN",
         status="SUCCESS",
         user_id=user.id,
         request=request,
-        metadata={"email": user.email, "role": user.role}
+        metadata={"email": user.email}
     )
     
-    access_token = create_access_token(data={"sub": user.email, "role": user.role})
-    refresh_token = create_refresh_token(data={"sub": user.email, "role": user.role})
+    access_token = create_access_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email})
     return {
         "access_token": access_token, 
         "refresh_token": refresh_token,
@@ -183,14 +179,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     if user is None:
         raise credentials_exception
     return user
-
-async def get_current_owner(current_user: User = Depends(get_current_user)):
-    if current_user.role != "OWNER":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="You do not have permission to access this resource."
-        )
-    return current_user
 
 @router.post("/logout")
 async def logout(request: Request, current_user: User = Depends(get_current_user)):

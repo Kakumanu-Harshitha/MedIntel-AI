@@ -6,9 +6,6 @@ from typing import Any
 from groq import AsyncGroq
 from dotenv import load_dotenv
 from fastapi import Request
-from sqlalchemy.orm import Session
-from .database import SessionLocal
-from .models import SystemConfig
 from .schemas import RiskAssessment, Explanation, Recommendations, HealthReport
 from . import mongo_memory
 from .rag_service import rag_service
@@ -30,7 +27,7 @@ if client:
 else:
     print("⚠️ WARNING: GROQ_API_KEY not found! LLM service disabled.")
 
-async def call_llm_with_fallback(messages: list[dict], response_format: dict | None = None, use_primary: bool = True, allow_fallback: bool = True) -> str:
+async def call_llm_with_fallback(messages: list[dict], response_format: dict | None = None, use_primary: bool = True) -> str:
     """
     Calls Groq LLM with automatic fallback to a smaller model if rate limited.
     """
@@ -51,7 +48,7 @@ async def call_llm_with_fallback(messages: list[dict], response_format: dict | N
         return response.choices[0].message.content
     except groq.RateLimitError as e:
         # If we already tried the fallback or if we were using the primary and it failed
-        if current_model == PRIMARY_MODEL and allow_fallback:
+        if current_model == PRIMARY_MODEL:
             print(f"⚠️ Rate limit reached for {PRIMARY_MODEL}. Falling back to {FALLBACK_MODEL}...")
             try:
                 # Attempt 2 with fallback model
@@ -138,19 +135,24 @@ SYMPTOM_FALLBACKS = {
 def get_symptom_fallback(query: str) -> str:
     """
     Returns a safe, general symptom explanation if the query matches a known symptom.
-    This is a CRITICAL SAFETY FEATURE to prevent "No information available" failures.
-    
-    Args:
-        query: User's query text
-        
-    Returns:
-        Fallback explanation if symptom detected, None otherwise
+    Improved matching to handle multi-word variations and word boundaries.
     """
     query_lower = query.lower()
     
-    # Check for exact or partial matches
+    # 1. Normalize query: remove extra spaces, punctuation
+    import re
+    normalized_query = re.sub(r'[^\w\s]', '', query_lower)
+    
+    # Special case: "head ache" -> "headache"
+    normalized_query = normalized_query.replace("head ache", "headache")
+    normalized_query = normalized_query.replace("stomach ache", "stomach pain")
+    normalized_query = normalized_query.replace("back ache", "back pain")
+
+    # 2. Check for exact or partial matches with word boundaries
     for symptom, explanation in SYMPTOM_FALLBACKS.items():
-        if symptom in query_lower:
+        # Check if symptom is in the normalized query as a whole word
+        pattern = rf"\b{re.escape(symptom)}\b"
+        if re.search(pattern, normalized_query):
             return explanation
     
     return None
@@ -291,52 +293,29 @@ OR "No relevant memory used"
 """
 
 PROMPT_MEDICAL_RAG = """
-You are a Medical Information Assistant operating in a Retrieval-Augmented Generation (RAG) system. 
-Your task is to generate clear, human-readable, medically safe responses using retrieved content OR fallback symptom knowledge.
+You are a Medical Information Assistant. Your goal is to provide helpful, safe, and direct health information based on the user's query.
 
-🔒 CRITICAL OUTPUT RULES (MANDATORY) 
-- Output ONLY clean, readable English text.
-- Do NOT output: random symbols, mixed languages, encoding artifacts, LaTeX fragments, or internal tokens (vectors, IDs).
-- If retrieved content is corrupted or irrelevant, use the fallback data provided.
+INSTRUCTIONS:
+1. Use the provided retrieved medical documents OR fallback symptom data to explain the symptoms or condition.
+2. If no reliable content is available for rare queries, say: "I don't have enough reliable information to answer this clearly." 
+3. Use previous user information ONLY IF confirmed as relevant.
+4. Do NOT diagnose or prescribe. Use cautious language: "may be associated with", "can vary between individuals".
+5. For symptom queries, provide:
+   - Explanation of the symptom
+   - Common causes
+   - Self-care advice
+   - Warning signs for a doctor visit
 
-📚 CONTEXT USAGE RULES 
-- Use the provided retrieved medical documents OR fallback symptom data.
-- If you see "[FALLBACK SYMPTOM DATA]" in the retrieved content, USE IT - it is trusted medical information.
-- Never say "I don't have enough information" for common symptoms.
-- If no reliable content is available for rare queries, say: "I don't have enough reliable information to answer this clearly." 
-
-🧠 USER MEMORY RULES 
-- Use previous user information ONLY IF confirmed as relevant (Confirmed Context provided below).
-- If no confirmed context is provided, ignore all previous data.
-
-🩺 MEDICAL SAFETY RULES 
-- Do NOT diagnose or prescribe.
-- Use cautious language: "may be associated with", "can vary between individuals".
-- Always clarify uncertainty.
-
-🚨 SYMPTOM RESPONSE RULES (CRITICAL)
-For symptom queries, you MUST provide:
-1. Clear explanation of what the symptom generally means
-2. Common, non-diagnostic causes
-3. General self-care or lifestyle advice
-4. Warning signs when medical attention is recommended
-
-🚫 CONVERGENCE RULES
-- Your response must be helpful and informative based on current data.
-- If you need more details to be more specific, you may include ONE polite follow-up question at the very end of your "health_information" field.
-- Ensure the response provides value even if the user doesn't answer the follow-up.
-
-🧾 RESPONSE STRUCTURE (STRICT) 
-You MUST output a JSON object with this structure:
+RESPONSE STRUCTURE (JSON):
 {{
   "type": "health_report",
-  "health_information": "Clear explanation in simple language",
-  "possible_conditions": ["High-level possibility 1", "High-level possibility 2"],
-  "reasoning_brief": "Briefly explain why this information is provided",
-  "recommended_next_steps": "When to seek professional help",
-  "ai_confidence": "Low/Medium/High with brief reason",
+  "health_information": "Detailed response to the user.",
+  "possible_conditions": ["Condition 1", "Condition 2"],
+  "reasoning_brief": "Brief reasoning for the analysis.",
+  "recommended_next_steps": "Advice on what to do next.",
+  "ai_confidence": "Confidence level (Low/Medium/High)",
   "trusted_sources": ["Source 1", "Source 2"],
-  "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
+  "disclaimer": "This is for informational purposes and not a diagnosis."
 }}
 
 CURRENT USER QUERY:
@@ -364,85 +343,37 @@ Do not change medical facts. Improve clarity and questioning.
 
 # --- PROMPT: Medical Report Analysis ---
 PROMPT_REPORT_ANALYZER = """
-✅ Medical Lab Result Explanation Assistant – SYSTEM PROMPT 
+You are a Medical Lab Result Expert. Your role is to analyze and explain medical reports directly to the user.
 
-🔹 Role & Mission
-You are a medical lab result explanation assistant. 
-Your role is NOT to diagnose diseases. 
-Your role is to EXPLAIN what the extracted lab values mean in simple, patient-friendly language.
+TASK:
+1. Explain what each lab test or marker means in simple terms.
+2. Analyze the user's values against normal ranges.
+3. Provide a summary of the findings.
+4. DO NOT provide a medical diagnosis.
 
-🔹 Input Data
+INPUT DATA:
 - EXTRACTED LAB DATA: {report_text}
 - USER CONTEXT: {user_context}
 - MEDICAL REFERENCE DATA (RAG): {rag_data}
 
-──────────────────────────────── 
-1. NEVER STOP AT EXTRACTION 
-──────────────────────────────── 
-If a test value exists (even if NORMAL), you MUST explain: 
-• What this test measures 
-• What a NORMAL / LOW / HIGH value generally indicates 
-• Whether the value is reassuring or needs attention 
-Do NOT just display tables. Do NOT repeat values without explanation. 
-
-──────────────────────────────── 
-2. STATUS-BASED EXPLANATION RULES 
-──────────────────────────────── 
-If status = NORMAL: 
-• Say this is within the expected healthy range. Explain what this suggests about body function. Reassure the user.
-If status = LOW: 
-• Explain common non-diagnostic reasons. Mention possible nutritional/lifestyle factors. Recommend medical consultation if symptoms exist.
-If status = HIGH: 
-• Explain common non-diagnostic causes (inflammation, infection, stress, dehydration, etc.). Recommend follow-up testing or consultation.
-If status = BORDERLINE: 
-• Explain that values are near limits. Suggest monitoring or repeat testing.
-If status = UNKNOWN: 
-• Explain that the value was not available. Do NOT speculate. Suggest uploading a clearer report if relevant.
-
-──────────────────────────────── 
-3. CONDITION CONTEXT (IMPORTANT) 
-──────────────────────────────── 
-When explaining a test: 
-• Explain the BODY FUNCTION involved (immune system, oxygen transport, clotting, etc.) in simple language. Avoid medical jargon unless explained.
-Example: "Neutrophils help fight bacterial infections." 
-
-──────────────────────────────── 
-4. MULTI-TEST SUMMARY (CRITICAL) 
-──────────────────────────────── 
-Provide a short summary: 
-• Overall impression of the report.
-• Whether results appear reassuring, mixed, or unclear.
-• Mention if findings are partial or complete.
-Example: "Overall, the available values appear mostly within normal limits, which is reassuring. However, this analysis is partial because some parameters were not available." 
-
-──────────────────────────────── 
-5. SAFETY & DISCLAIMER 
-──────────────────────────────── 
-• Do NOT diagnose diseases. Do NOT say the user has anemia, infection, cancer, etc. 
-• Always include: “This interpretation is informational and not a medical diagnosis.” 
-
-──────────────────────────────── 
-6. OUTPUT STRUCTURE (MANDATORY JSON) 
-──────────────────────────────── 
-{{ 
-  "type": "medical_report_analysis", 
-  "summary": "Overall summary (as per Rule 4).", 
-  "test_analysis": [ 
-    {{ 
-      "test_name": "Marker Name (e.g. Hemoglobin)", 
-      "value": "Value (or 'Not Provided')", 
-      "normal_range": "Normal range (or 'Not Provided')", 
-      "status": "Low | Normal | High | Borderline | Unknown", 
-      "explanation": "Combine: 1. What it measures (body function). 2. What the result means. 3. Status explanation (as per Rule 2 & 3)." 
-    }} 
-  ], 
-  "general_guidance": ["Safe lifestyle observations/tips based on findings"], 
-  "when_to_consult_doctor": ["When to consult a doctor based on findings (as per Rule 6)"], 
-  "ai_confidence": "Low | Medium | High (based on data clarity)", 
-  "disclaimer": "This interpretation is informational and not a medical diagnosis." 
-}} 
-
-Tone: Calm, Supportive, Clear, Non-alarming.
+OUTPUT FORMAT (JSON):
+{{
+  "type": "medical_report_analysis",
+  "summary": "General overview of the report.",
+  "test_analysis": [
+    {{
+      "test_name": "Name",
+      "value": "User's value",
+      "normal_range": "Reference range",
+      "status": "Low/Normal/High",
+      "explanation": "Simple explanation of this result."
+    }}
+  ],
+  "general_guidance": ["List of suggestions"],
+  "when_to_consult_doctor": ["Specific signs to watch for"],
+  "ai_confidence": "Confidence level",
+  "disclaimer": "This is for informational purposes only."
+}}
 """
 
 # --- PROMPT: Medical Image Analysis (Router & Specialists) ---
@@ -471,54 +402,12 @@ OUTPUT FORMAT (JSON):
 }}
 """
 
-PROMPT_SKIN_SPECIALIST = """
-You are a Dermatology Expert Assistant. Your role is to analyze observations of skin conditions.
-STRICT RULE: ONLY analyze skin, rashes, or lesions. If the observations are not related to skin, trigger HITL.
-
-INPUT DATA:
-- VISION MODEL OBSERVATIONS: {image_caption}
-- USER CONTEXT: {user_context}
-- MEDICAL REFERENCE DATA (RAG): {rag_data}
-
-OUTPUT FORMAT (JSON):
-{{
-  "input_type": "medical_image",
-  "modality": "dermatology",
-  "observations": ["Detailed skin features"],
-  "possible_conditions": ["Non-diagnostic skin possibilities"],
-  "general_advice": "Safe skin care advice",
-  "confidence_level": "Low | Medium | High",
-  "disclaimer": "This is a dermatology screening-level insight. Not a diagnosis."
-}}
-"""
-
-PROMPT_EYE_SPECIALIST = """
-You are an Ophthalmology Expert Assistant. Your role is to analyze observations of eye conditions (e.g., redness, discharge, swelling, retina features).
-STRICT RULE: ONLY analyze eye-related observations. If the observations are not related to the eye, trigger HITL.
-
-INPUT DATA:
-- VISION MODEL OBSERVATIONS: {image_caption}
-- USER CONTEXT: {user_context}
-- MEDICAL REFERENCE DATA (RAG): {rag_data}
-
-OUTPUT FORMAT (JSON):
-{{
-  "input_type": "medical_image",
-  "modality": "ophthalmology",
-  "observations": ["Detailed eye features (e.g., Conjunctival redness, eyelid swelling)"],
-  "possible_conditions": ["Non-diagnostic eye possibilities (e.g., Conjunctivitis, Subconjunctival hemorrhage)"],
-  "general_advice": "Safe eye care advice (e.g., Do not rub eyes, use clean compress)",
-  "confidence_level": "Low | Medium | High",
-  "disclaimer": "This is an ophthalmology screening-level insight. Not a diagnosis."
-}}
-"""
-
 PROMPT_RADIOLOGY_SPECIALIST = """
-You are a Radiology Expert Assistant. Your role is to analyze observations from medical scans (X-ray, MRI, CT).
-STRICT RULE: ONLY analyze internal imaging. If observations are external (skin, eye), trigger HITL.
+You are a Radiology Expert. Your task is to analyze the observations from a medical scan (X-ray, MRI, CT, Ultrasound) and provide a clear explanation for the user.
 
 INPUT DATA:
-- VISION MODEL OBSERVATIONS: {image_caption}
+- VISION OBSERVATIONS: {image_caption}
+- IMAGE TEXT (OCR): {image_text}
 - USER CONTEXT: {user_context}
 - MEDICAL REFERENCE DATA (RAG): {rag_data}
 
@@ -526,11 +415,53 @@ OUTPUT FORMAT (JSON):
 {{
   "input_type": "medical_image",
   "modality": "radiology",
-  "observations": ["Detailed imaging findings"],
-  "possible_conditions": ["Non-diagnostic imaging possibilities"],
-  "general_advice": "Safe follow-up advice",
-  "confidence_level": "Low | Medium | High",
-  "disclaimer": "This is a radiology screening-level insight. Not a diagnosis."
+  "observations": ["List of visual findings"],
+  "possible_conditions": ["Conditions associated with these findings"],
+  "general_advice": "Recommended next steps",
+  "confidence_level": "High/Medium/Low",
+  "disclaimer": "This is a screening-level insight and not a medical diagnosis."
+}}
+"""
+
+PROMPT_SKIN_SPECIALIST = """
+You are a Dermatology Expert. Your task is to analyze observations from a skin image (rash, lesion, etc.) and provide a clear explanation for the user.
+
+INPUT DATA:
+- VISION OBSERVATIONS: {image_caption}
+- IMAGE TEXT (OCR): {image_text}
+- USER CONTEXT: {user_context}
+- MEDICAL REFERENCE DATA (RAG): {rag_data}
+
+OUTPUT FORMAT (JSON):
+{{
+  "input_type": "medical_image",
+  "modality": "dermatology",
+  "observations": ["List of visual findings"],
+  "possible_conditions": ["Conditions associated with these findings"],
+  "general_advice": "Skin care or next steps",
+  "confidence_level": "High/Medium/Low",
+  "disclaimer": "This is a screening-level insight and not a medical diagnosis."
+}}
+"""
+
+PROMPT_EYE_SPECIALIST = """
+You are an Ophthalmology Expert. Your task is to analyze observations from an eye image and provide a clear explanation for the user.
+
+INPUT DATA:
+- VISION OBSERVATIONS: {image_caption}
+- IMAGE TEXT (OCR): {image_text}
+- USER CONTEXT: {user_context}
+- MEDICAL REFERENCE DATA (RAG): {rag_data}
+
+OUTPUT FORMAT (JSON):
+{{
+  "input_type": "medical_image",
+  "modality": "ophthalmology",
+  "observations": ["List of visual findings"],
+  "possible_conditions": ["Conditions associated with these findings"],
+  "general_advice": "Eye care or next steps",
+  "confidence_level": "High/Medium/Low",
+  "disclaimer": "This is a screening-level insight and not a medical diagnosis."
 }}
 """
 
@@ -555,507 +486,504 @@ OUTPUT FORMAT (JSON):
 """
 
 # --- Reasoning Layer (LLM) ---
-def is_feature_enabled(db: Session, key: str) -> bool:
-    """Helper to check feature toggles within LLM service"""
-    config = db.query(SystemConfig).filter(SystemConfig.key == key).first()
-    if not config:
-        return True # Default to ON
-    return config.value == "ON"
-
 async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict, request: Request | None = None) -> str:
     """
     Main orchestration function for the 'Google-Level' 8-stage pipeline.
     """
     user_id = int(profile.get("user_id")) if profile.get("user_id") else None
-    
-    db = SessionLocal()
-    try:
-        # Check toggles at start of analysis
-        use_confidence_scoring = is_feature_enabled(db, "feature_confidence_scoring")
-        use_hitl_escalation = is_feature_enabled(db, "feature_hitl_escalation")
-        use_llm_fallback = is_feature_enabled(db, "feature_llm_fallback")
 
-        if not client:
-            await audit_logger.log_event(
+    if not client:
+        await audit_logger.log_event(
+            action="AI_QUERY",
+            status="FAILURE",
+            user_id=user_id,
+            request=request,
+            metadata={"reason": "Service Unavailable - API Key missing"}
+        )
+        return json.dumps({"summary": "Service Unavailable", "disclaimer": "Check API Keys"})
+
+    # --- STEP 1: Input Harmonization (Multimodal) ---
+    user_text = inputs.get("text_query", "") or ""
+    voice_text = inputs.get("transcribed_text", "") or ""
+    image_desc = inputs.get("image_caption", "") or ""
+    report_text = inputs.get("report_text", "") or ""
+    user_confirmation = (inputs.get("user_confirmation", "skip") or "skip").lower()
+    
+    print(f"DEBUG: Harmonized report_text length: {len(report_text)}")
+    if report_text:
+        print(f"DEBUG: report_text snippet: {report_text[:100]}...")
+    
+    # Ensure combined_input has at least a placeholder if report_text exists but OCR failed
+    combined_input = f"{user_text} {voice_text} {image_desc} {report_text}".strip()
+    if not combined_input and report_text:
+        combined_input = "[Medical Report Analysis Requested]"
+        
+    # Check if ANY input was provided (including multimodal data)
+    has_any_input = any([user_text, voice_text, image_desc, report_text])
+    
+    if not has_any_input:
+        return json.dumps({"summary": "No input provided.", "disclaimer": "Please provide symptoms or upload a report."})
+
+    # --- STEP 1.5: Detect Analysis Mode ---
+    is_report_analysis = bool(report_text)
+    is_image_analysis = bool(image_desc)
+    
+    if is_report_analysis:
+        if "[PDF Report Uploaded" in report_text or "[Image Report Uploaded" in report_text:
+            print("⚠️ Report Analysis Mode (Placeholder detected)")
+        else:
+            print("📋 Entering Medical Report Analysis Mode")
+    
+    if is_image_analysis:
+        print("📷 Entering Medical Image Analysis Mode")
+
+    if is_report_analysis and is_image_analysis:
+        print("🧬 Entering Combined Multimodal Analysis Mode")
+
+    modality = None
+    escalation_reason = None
+
+    # --- STEP 2: Deterministic Guardrails (Safety) ---
+    safety_result = guardrails.check_safety(combined_input)
+    if not safety_result["is_safe"]:
+        return json.dumps(safety_result["response"])
+
+    # --- STEP 2.5: SYMPTOM SHORTCUT CHECK (OPTIMIZATION) ---
+    # Check if this is a common symptom query - if yes, skip LLM intent detection and go straight to fallback
+    # This improves response time and reduces API costs for common queries
+    query_lower = combined_input.lower()
+    
+    # Skip symptom shortcut if in report analysis mode
+    if is_report_analysis:
+        print("⏭️ Skipping symptom shortcut for report analysis")
+        symptom_shortcut = None
+    else:
+        # Check for direct symptom mentions
+        symptom_shortcut = get_symptom_fallback(combined_input)
+    
+    # Also check for "symptoms of/for [disease]" pattern - these should NOT use shortcut
+    is_disease_symptom_query = any(pattern in query_lower for pattern in [
+        "symptoms of", "symptoms for", "what are the symptoms", 
+        "signs of", "signs and symptoms"
+    ])
+    
+    # CONVERSATION MEMORY: Check if we already discussed this symptom recently
+    already_discussed = False
+    if history and len(history) > 0 and symptom_shortcut:
+        # Check last 5 interactions for the same symptom
+        # MongoDB history structure: [{"role": "user", "content": "I have nausea"}, {"role": "assistant", "content": "..."}]
+        for past_interaction in history[-5:]:
+            # Only check user messages, not assistant responses
+            if past_interaction.get("role") != "user":
+                continue
+                
+            past_query = past_interaction.get("content", "").lower()
+            
+            # Check if any symptom from our fallback dict was mentioned
+            for symptom_name in SYMPTOM_FALLBACKS.keys():
+                if symptom_name in query_lower and symptom_name in past_query:
+                    already_discussed = True
+                    print(f"💬 CONVERSATION MEMORY: Already discussed '{symptom_name}' recently")
+                    print(f"   Previous query: {past_query[:50]}...")
+                    break
+            if already_discussed:
+                break
+    
+    # If it's a common symptom (not asking about disease symptoms) and we have fallback data, use shortcut
+    if symptom_shortcut and not is_disease_symptom_query and user_confirmation != "yes":
+        print(f"⚡ SYMPTOM SHORTCUT: Bypassing LLM for common symptom: {combined_input[:50]}...")
+        
+        # Check if we should ask a follow-up even for shortcut symptoms (e.g., if very brief)
+        intent_enum = QueryIntent.SYMPTOM_QUERY
+        if rag_router.should_ask_follow_up(combined_input, intent_enum, history):
+             await audit_logger.log_event(
                 action="AI_QUERY",
-                status="FAILURE",
+                status="SUCCESS",
                 user_id=user_id,
                 request=request,
-                metadata={"reason": "Service Unavailable - API Key missing"}
-            )
-            return json.dumps({"summary": "Service Unavailable", "disclaimer": "Check API Keys"})
+                metadata={"type": "clarification_triggered", "symptom": combined_input[:50]}
+             )
+             return json.dumps({
+                "type": "clarification_questions",
+                "context": f"I can certainly help you with information about {combined_input}. To be more specific:",
+                "questions": ["How long have you been experiencing this?", "Are there any other symptoms accompanying it?"],
+                "requires_confirmation": True
+            })
 
-        # --- STEP 1: Input Harmonization (Multimodal) ---
-        user_text = inputs.get("text_query", "") or ""
-        voice_text = inputs.get("transcribed_text", "") or ""
-        image_desc = inputs.get("image_caption", "") or ""
-        report_text = inputs.get("report_text", "") or ""
-        user_confirmation = (inputs.get("user_confirmation", "skip") or "skip").lower()
-        
-        print(f"DEBUG: Harmonized report_text length: {len(report_text)}")
-        if report_text:
-            print(f"DEBUG: report_text snippet: {report_text[:100]}...")
-        
-        # Ensure combined_input has at least a placeholder if report_text exists but OCR failed
-        combined_input = f"{user_text} {voice_text} {image_desc} {report_text}".strip()
-        if not combined_input and report_text:
-            combined_input = "[Medical Report Analysis Requested]"
-            
-        # Check if ANY input was provided (including multimodal data)
-        has_any_input = any([user_text, voice_text, image_desc, report_text])
-        
-        if not has_any_input:
-            return json.dumps({"summary": "No input provided.", "disclaimer": "Please provide symptoms or upload a report."})
-
-        # --- STEP 1.5: Detect Analysis Mode ---
-        is_report_analysis = False
-        if report_text:
-            is_report_analysis = True
-            if "[PDF Report Uploaded" in report_text or "[Image Report Uploaded" in report_text:
-                print("⚠️ Report Analysis Mode (Placeholder detected)")
-            else:
-                print("📋 Entering Medical Report Analysis Mode")
-        
-        is_image_analysis = bool(image_desc) and not is_report_analysis
-    
-        modality = None
-        escalation_reason = None
-
-        if is_report_analysis:
-            print("📋 Entering Medical Report Analysis Mode")
-        elif is_image_analysis:
-            print("📷 Entering Medical Image Analysis Mode")
-
-        # --- STEP 2: Deterministic Guardrails (Safety) ---
-        safety_result = guardrails.check_safety(combined_input)
-        if not safety_result["is_safe"]:
-            return json.dumps(safety_result["response"])
-
-        # --- STEP 2.5: SYMPTOM SHORTCUT CHECK (OPTIMIZATION) ---
-        # Check if this is a common symptom query - if yes, skip LLM intent detection and go straight to fallback
-        # This improves response time and reduces API costs for common queries
-        query_lower = combined_input.lower()
-        
-        # Skip symptom shortcut if in report analysis mode
-        if is_report_analysis:
-            print("⏭️ Skipping symptom shortcut for report analysis")
-            symptom_shortcut = None
-        else:
-            # Check for direct symptom mentions
-            symptom_shortcut = get_symptom_fallback(combined_input)
-        
-        # Also check for "symptoms of/for [disease]" pattern - these should NOT use shortcut
-        is_disease_symptom_query = any(pattern in query_lower for pattern in [
-            "symptoms of", "symptoms for", "what are the symptoms", 
-            "signs of", "signs and symptoms"
-        ])
-    
-        # CONVERSATION MEMORY: Check if we already discussed this symptom recently
-        already_discussed = False
-        if history and len(history) > 0 and symptom_shortcut:
-            # Check last 5 interactions for the same symptom
-            # MongoDB history structure: [{"role": "user", "content": "I have nausea"}, {"role": "assistant", "content": "..."}]
-            for past_interaction in history[-5:]:
-                # Only check user messages, not assistant responses
-                if past_interaction.get("role") != "user":
-                    continue
-                    
-                past_query = past_interaction.get("content", "").lower()
-                
-                # Check if any symptom from our fallback dict was mentioned
-                for symptom_name in SYMPTOM_FALLBACKS.keys():
-                    if symptom_name in query_lower and symptom_name in past_query:
-                        already_discussed = True
-                        print(f"💬 CONVERSATION MEMORY: Already discussed '{symptom_name}' recently")
-                        print(f"   Previous query: {past_query[:50]}...")
-                        break
-                if already_discussed:
-                    break
-        
-        # If it's a common symptom (not asking about disease symptoms) and we have fallback data, use shortcut
-        if symptom_shortcut and not is_disease_symptom_query and user_confirmation != "yes":
-            print(f"⚡ SYMPTOM SHORTCUT: Bypassing LLM for common symptom: {combined_input[:50]}...")
-            
-            # Check if we should ask a follow-up even for shortcut symptoms (e.g., if very brief)
-            intent_enum = QueryIntent.SYMPTOM_QUERY
-            if rag_router.should_ask_follow_up(combined_input, intent_enum, history):
-                 await audit_logger.log_event(
-                    action="AI_QUERY",
-                    status="SUCCESS",
-                    user_id=user_id,
-                    request=request,
-                    metadata={"type": "clarification_triggered", "symptom": combined_input[:50]}
-                 )
-                 return json.dumps({
-                    "type": "clarification_questions",
-                    "context": f"I can certainly help you with information about {combined_input}. To be more specific:",
-                    "questions": ["How long have you been experiencing this?", "Are there any other symptoms accompanying it?"],
-                    "requires_confirmation": True
-                })
-
-            # If already discussed, provide follow-up response
-            if already_discussed:
-                await audit_logger.log_event(
-                    action="AI_QUERY",
-                    status="SUCCESS",
-                    user_id=user_id,
-                    request=request,
-                    metadata={"type": "symptom_shortcut", "already_discussed": True, "symptom": combined_input[:50]}
-                )
-                return json.dumps({
-                    "type": "health_report",
-                    "health_information": f"I see you're still experiencing this symptom. {symptom_shortcut}\n\nSince this is continuing, I recommend:\n1. Keep track of when it occurs and any triggers\n2. Note if it's getting better, worse, or staying the same\n3. Consider consulting a healthcare professional if it persists or worsens",
-                    "possible_conditions": ["Ongoing symptom - monitoring recommended"],
-                    "reasoning_brief": "Following up on previously discussed symptom with additional guidance.",
-                    "recommended_next_steps": "If symptoms persist or worsen, please consult a healthcare professional for personalized evaluation.",
-                    "ai_confidence": "High - Follow-up Guidance",
-                    "trusted_sources": ["Medical Knowledge Base", "MedlinePlus (NIH)"],
-                    "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
-                })
-            
-            # First time discussing this symptom
+        # If already discussed, provide follow-up response
+        if already_discussed:
             await audit_logger.log_event(
                 action="AI_QUERY",
                 status="SUCCESS",
                 user_id=user_id,
                 request=request,
-                metadata={"type": "symptom_shortcut", "already_discussed": False, "symptom": combined_input[:50]}
+                metadata={"type": "symptom_shortcut", "already_discussed": True, "symptom": combined_input[:50]}
             )
             return json.dumps({
                 "type": "health_report",
-                "health_information": symptom_shortcut,
-                "possible_conditions": ["Various causes possible - not a diagnosis"],
-                "reasoning_brief": "Providing general information about this common symptom.",
-                "recommended_next_steps": "Monitor your symptoms. Consult a healthcare professional if symptoms persist, worsen, or are accompanied by other concerning signs.",
-                "ai_confidence": "High - General Symptom Information",
+                "health_information": f"I see you're still experiencing this symptom. {symptom_shortcut}\n\nSince this is continuing, I recommend:\n1. Keep track of when it occurs and any triggers\n2. Note if it's getting better, worse, or staying the same\n3. Consider consulting a healthcare professional if it persists or worsens",
+                "possible_conditions": ["Ongoing symptom - monitoring recommended"],
+                "reasoning_brief": "Following up on previously discussed symptom with additional guidance.",
+                "recommended_next_steps": "If symptoms persist or worsen, please consult a healthcare professional for personalized evaluation.",
+                "ai_confidence": "High - Follow-up Guidance",
                 "trusted_sources": ["Medical Knowledge Base", "MedlinePlus (NIH)"],
                 "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
             })
+        
+        # First time discussing this symptom
+        await audit_logger.log_event(
+            action="AI_QUERY",
+            status="SUCCESS",
+            user_id=user_id,
+            request=request,
+            metadata={"type": "symptom_shortcut", "already_discussed": False, "symptom": combined_input[:50]}
+        )
+        return json.dumps({
+            "type": "health_report",
+            "health_information": symptom_shortcut,
+            "possible_conditions": ["Various causes possible - not a diagnosis"],
+            "reasoning_brief": "Providing general information about this common symptom.",
+            "recommended_next_steps": "Monitor your symptoms. Consult a healthcare professional if symptoms persist, worsen, or are accompanied by other concerning signs.",
+            "ai_confidence": "High - General Symptom Information",
+            "trusted_sources": ["Medical Knowledge Base", "MedlinePlus (NIH)"],
+            "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
+        })
 
-        # --- STEP 3: Intent Detection (RAG Router) ---
-        # Use RAG router for deterministic, enterprise-grade intent detection
-        if is_report_analysis:
-            intent_enum = QueryIntent.TEST_OR_REPORT_QUERY
-            detected_intent = "test_or_report_based"
-        else:
-            intent_enum = rag_router.detect_intent(combined_input, history)
-            detected_intent = intent_enum.name.lower().replace('_query', '_based')  # Convert to old format for compatibility
-        
-        print(f"🎯 RAG Router detected intent: {intent_enum.name} -> {detected_intent}")
-        
-        # Also run LLM controller for clarification decision (but use router intent)
-        if is_report_analysis:
-            # Skip controller for report analysis - go straight to retrieval
-            ctrl = {"needs_clarification": False, "detected_intent": detected_intent}
-        else:
-            # STEP 3: Use call_llm_with_fallback with use_primary=False to save tokens on primary model
-            ctrl_content = await call_llm_with_fallback(
-                messages=[
-                    {"role": "system", "content": PROMPT_CONTROLLER},
-                    {"role": "user", "content": f"User Input: {combined_input}"}
-                ],
-                response_format={"type": "json_object"},
-                use_primary=False,  # Intent detection is simple, use smaller model by default
-                allow_fallback=use_llm_fallback
-            )
-            try:
-                ctrl = json.loads(ctrl_content)
-                # Override LLM intent with router intent (router is more reliable)
-                ctrl["detected_intent"] = detected_intent
-                print(f"🎯 Final intent: {detected_intent}")
-            except json.JSONDecodeError:
-                print(f"⚠️ Controller JSON Error: {ctrl_content}")
-                ctrl = {"needs_clarification": False, "detected_intent": detected_intent}
-        
-        # --- STEP 4: Clarification Loop (Follow-up) with CONVERSATION STATE CHECK ---
-        # Only ask clarification if:
-        # 1. This is the FIRST interaction (user_confirmation == "skip")
-        # 2. We haven't already asked clarification for this query in conversation history
-        
-        if not is_report_analysis and user_confirmation == "skip":
-            # Use RAG router's anti-loop logic for follow-up decision
-            should_ask = rag_router.should_ask_follow_up(combined_input, intent_enum, history)
-            
-            # If router says ask AND controller agrees, then ask
-            if should_ask and ctrl.get("needs_clarification") and detected_intent == "symptom_based":
-                return json.dumps({
-                    "type": "clarification_questions",
-                    "context": "To provide a more accurate assessment, I have a few follow-up questions:",
-                    "questions": ctrl.get("questions", ["Have you experienced this before?"]),
-                    "requires_confirmation": True # Trigger Yes/No/Skip UI in frontend
-                })
-
-        # --- STEP 5: Contextual Memory Selection (Memory Selector) ---
-        user_id = str(profile.get("user_id", "unknown"))
-        confirmed_context = "None (user denied prior occurrence or no confirmation provided)"
-        
-        if user_confirmation == "yes":
-            relevant_memory_chunks = structured_memory.get_relevant_history(user_id, combined_input)
-            raw_memory = structured_memory.summarize_memory(relevant_memory_chunks)
-            
-            if raw_memory and raw_memory != "No relevant past context found.":
-                confirmed_context = await call_llm_with_fallback(
-                    messages=[
-                        {"role": "system", "content": PROMPT_MEMORY_SELECTOR.format(
-                            user_input=combined_input,
-                            user_confirmation=user_confirmation,
-                            past_data=raw_memory
-                        )}
-                    ],
-                    use_primary=False, # Memory selection is simple, use smaller model
-                    allow_fallback=use_llm_fallback
-                )
-
-        # --- STEP 6: Evidence Retrieval (RAG Router) ---
-        rag_data = "No specific reference data found. Use general medical knowledge for terminology."
-        if rag_service.enabled:
-            # Use RAG router for query augmentation and dataset routing
-            search_query = rag_router.augment_query(combined_input, intent_enum)
-            print(f"🔍 Augmented query: {search_query[:100]}...")
-            
-            # Search using confirmed context + current input
-            if "Relevant memory included" in confirmed_context:
-                search_query += " " + confirmed_context
-                
-            # Retrieve with higher top_k, then filter by allowed datasets
-            docs = rag_service.search(search_query, top_k=12)
-            
-            # Filter results based on intent-specific dataset routing
-            allowed_datasets = rag_router.get_dataset_routing(intent_enum)
-            
-            # SPECIAL RULE: For report analysis, use ONLY MedlinePlus/WHO/NHS
-            if is_report_analysis:
-                allowed_datasets = [
-                    DatasetType.MEDLINEPLUS,
-                    DatasetType.WHO_NHS
-                ]
-                print("🛡️ REPORT ANALYSIS: Restricting sources to MedlinePlus/WHO/NHS only")
-                
-            docs = rag_router.filter_results_by_dataset(docs, allowed_datasets)
-            print(f"📊 Retrieved {len(docs)} results from allowed datasets: {[d.name for d in allowed_datasets]}")
-            
-            # Validate retrieval quality
-            is_valid, reason = rag_router.validate_retrieval_quality(docs, intent_enum)
-            if not is_valid:
-                print(f"⚠️ Retrieval quality check failed: {reason}")
-            if docs:
-                rag_data = ""
-                has_symptom_data = False
-                for d in docs:
-                    # Basic cleaning to remove potential encoding artifacts
-                    cleaned_text = d['text'].encode('ascii', 'ignore').decode('ascii')
-                    source_info = f"[{d['source']}]"
-                    if d.get('metadata', {}).get('category') == "Primary Symptom":
-                        source_info += " (PRIMARY SYMPTOM ENTRY)"
-                        has_symptom_data = True
-                    
-                    rag_data += f"- {source_info} {cleaned_text} (Title: {d['title']})\n"
-                
-                # ENHANCED FALLBACK: If this is a symptom query but RAG didn't return symptom data, add fallback
-                if detected_intent == "symptom_based" and not has_symptom_data:
-                    fallback = get_symptom_fallback(combined_input)
-                    if fallback:
-                        rag_data = f"[FALLBACK SYMPTOM DATA - Primary Source]\n{fallback}\n\n[Additional Context from Medical Database]\n{rag_data}"
-                        print(f"✅ Supplementing RAG data with symptom fallback for: {combined_input[:50]}...")
-            else:
-                # CRITICAL FALLBACK: Check for symptom fallback before failing
-                fallback = get_symptom_fallback(combined_input)
-                if fallback:
-                    rag_data = f"[FALLBACK SYMPTOM DATA] {fallback}"
-                    print(f"✅ Using symptom fallback for query: {combined_input[:50]}...")
-
-        # --- STEP 8: RETRIEVAL QUALITY CHECK ---
-        # Before calling expensive LLM, check if we have sufficient context
-        # If it's a symptom query and we have no data, use fallback directly
-        has_sufficient_context = True
-        
-        if detected_intent == "symptom_based":
-            # For symptom queries, we need either RAG data or fallback
-            if rag_data == "No verified medical information found for this specific query.":
-                # No RAG data - check if we have fallback
-                fallback = get_symptom_fallback(combined_input)
-                if fallback:
-                    # Use fallback directly without LLM call (saves API cost)
-                    print(f"⚡ QUALITY CHECK: Using fallback directly, skipping LLM for: {combined_input[:50]}...")
-                    return json.dumps({
-                        "type": "health_report",
-                        "health_information": fallback,
-                        "possible_conditions": ["Various causes possible - not a diagnosis"],
-                        "reasoning_brief": "Providing general information about this symptom based on medical knowledge.",
-                        "recommended_next_steps": "Monitor your symptoms. Consult a healthcare professional if symptoms persist, worsen, or are accompanied by other concerning signs.",
-                        "ai_confidence": "High - General Symptom Information",
-                        "trusted_sources": ["Medical Knowledge Base", "MedlinePlus (NIH)"],
-                        "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
-                    })
-                else:
-                    has_sufficient_context = False
-
-        # --- STEP 7: Medical Report Generation (Medical RAG) ---
+    # --- STEP 3: Intent Detection (RAG Router) ---
+    # Use RAG router for deterministic, enterprise-grade intent detection
+    if is_report_analysis:
+        intent_enum = QueryIntent.TEST_OR_REPORT_QUERY
+        detected_intent = "test_or_report_based"
+    else:
+        intent_enum = rag_router.detect_intent(combined_input, history)
+        detected_intent = intent_enum.name.lower().replace('_query', '_based')  # Convert to old format for compatibility
+    
+    print(f"🎯 RAG Router detected intent: {intent_enum.name} -> {detected_intent}")
+    
+    # Also run LLM controller for clarification decision (but use router intent)
+    if is_report_analysis:
+        # Skip controller for report analysis - go straight to retrieval
+        ctrl = {"needs_clarification": False, "detected_intent": detected_intent}
+    else:
+        # STEP 3: Use call_llm_with_fallback with use_primary=False to save tokens on primary model
+        ctrl_content = await call_llm_with_fallback(
+            messages=[
+                {"role": "system", "content": PROMPT_CONTROLLER},
+                {"role": "user", "content": f"User Input: {combined_input}"}
+            ],
+            response_format={"type": "json_object"},
+            use_primary=False  # Intent detection is simple, use smaller model by default
+        )
         try:
-            if is_report_analysis:
-                print("📝 Using PROMPT_REPORT_ANALYZER")
-                prompt_content = PROMPT_REPORT_ANALYZER.format(
-                    report_text=report_text,
-                    user_context=confirmed_context,
-                    rag_data=rag_data
-                )
-            elif is_image_analysis:
-                print(f"🖼️ Routing Image Analysis: {image_desc[:100]}...")
-                
-                # 1. Modality Detection (Layer 1)
-                modality_response = await call_llm_with_fallback(
-                    messages=[{"role": "system", "content": PROMPT_MODALITY_DETECTOR.format(image_caption=image_desc)}],
-                    response_format={"type": "json_object"},
-                    allow_fallback=use_llm_fallback
-                )
-                
-                try:
-                    modality_data = json.loads(modality_response)
-                    modality = modality_data.get("modality", "unknown")
-                    modality_confidence = modality_data.get("confidence", 0.0)
-                    print(f"🔍 Detected Modality: {modality} (Confidence: {modality_confidence})")
-                except:
-                    modality = "unknown"
-                    modality_confidence = 0.0
-                    print("⚠️ Failed to parse modality response, defaulting to unknown")
+            ctrl = json.loads(ctrl_content)
+            # Override LLM intent with router intent (router is more reliable)
+            ctrl["detected_intent"] = detected_intent
+            print(f"🎯 Final intent: {detected_intent}")
+        except json.JSONDecodeError:
+            print(f"⚠️ Controller JSON Error: {ctrl_content}")
+            ctrl = {"needs_clarification": False, "detected_intent": detected_intent}
+    
+    # --- STEP 4: Clarification Loop (Follow-up) with CONVERSATION STATE CHECK ---
+    # Only ask clarification if:
+    # 1. This is the FIRST interaction (user_confirmation == "skip")
+    # 2. We haven't already asked clarification for this query in conversation history
+    
+    if not is_report_analysis and user_confirmation == "skip":
+        # Use RAG router's anti-loop logic for follow-up decision
+        should_ask = rag_router.should_ask_follow_up(combined_input, intent_enum, history)
+        
+        # If router says ask AND controller agrees, then ask
+        if should_ask and ctrl.get("needs_clarification") and detected_intent == "symptom_based":
+            return json.dumps({
+                "type": "clarification_questions",
+                "context": "To provide a more accurate assessment, I have a few follow-up questions:",
+                "questions": ctrl.get("questions", ["Have you experienced this before?"]),
+                "requires_confirmation": True # Trigger Yes/No/Skip UI in frontend
+            })
 
-                # 2. Model Router (Layer 2) & Confidence Gate (Layer 4)
-                CONFIDENCE_THRESHOLD = 0.6 if use_confidence_scoring else 0.0
-                escalation_reason = None
+    # --- STEP 5: Contextual Memory Selection (Memory Selector) ---
+    user_id = str(profile.get("user_id", "unknown"))
+    confirmed_context = "None (user denied prior occurrence or no confirmation provided)"
+    
+    if user_confirmation == "yes":
+        relevant_memory_chunks = structured_memory.get_relevant_history(user_id, combined_input)
+        raw_memory = structured_memory.summarize_memory(relevant_memory_chunks)
+        
+        if raw_memory and raw_memory != "No relevant past context found.":
+            confirmed_context = await call_llm_with_fallback(
+                messages=[
+                    {"role": "system", "content": PROMPT_MEMORY_SELECTOR.format(
+                        user_input=combined_input,
+                        user_confirmation=user_confirmation,
+                        past_data=raw_memory
+                    )}
+                ],
+                use_primary=False # Memory selection is simple, use smaller model
+            )
+
+    # --- STEP 6: Evidence Retrieval (RAG Router) ---
+    # Add current multimodal context to confirmed_context for specialist prompts
+    current_input_context = f"\n[CURRENT INPUTS]\n"
+    if user_text: current_input_context += f"- Text Query: {user_text}\n"
+    if voice_text: current_input_context += f"- Voice Query: {voice_text}\n"
+    if image_desc: current_input_context += f"- Image Observations: {image_desc}\n"
+    if report_text and not is_report_analysis: current_input_context += f"- Report Summary: {report_text[:200]}...\n"
+    
+    if confirmed_context == "None (user denied prior occurrence or no confirmation provided)":
+        confirmed_context = current_input_context
+    else:
+        confirmed_context += current_input_context
+
+    rag_data = "No specific reference data found. Use general medical knowledge for terminology."
+    if rag_service.enabled:
+        # Use RAG router for query augmentation and dataset routing
+        search_query = rag_router.augment_query(combined_input, intent_enum)
+        print(f"🔍 Augmented query: {search_query[:100]}...")
+        
+        # Search using confirmed context + current input
+        if "Relevant memory included" in confirmed_context:
+            search_query += " " + confirmed_context
+            
+        # Retrieve with higher top_k, then filter by allowed datasets
+        docs = rag_service.search(search_query, top_k=12)
+        
+        # Filter results based on intent-specific dataset routing
+        allowed_datasets = rag_router.get_dataset_routing(intent_enum)
+        
+        # SPECIAL RULE: For report analysis, use ONLY MedlinePlus/WHO/NHS
+        if is_report_analysis:
+            allowed_datasets = [
+                DatasetType.MEDLINEPLUS,
+                DatasetType.WHO_NHS
+            ]
+            print("🛡️ REPORT ANALYSIS: Restricting sources to MedlinePlus/WHO/NHS only")
+            
+        docs = rag_router.filter_results_by_dataset(docs, allowed_datasets)
+        print(f"📊 Retrieved {len(docs)} results from allowed datasets: {[d.name for d in allowed_datasets]}")
+        
+        # Validate retrieval quality
+        is_valid, reason = rag_router.validate_retrieval_quality(docs, intent_enum)
+        if not is_valid:
+            print(f"⚠️ Retrieval quality check failed: {reason}")
+        if docs:
+            rag_data = ""
+            has_symptom_data = False
+            for d in docs:
+                # Basic cleaning to remove potential encoding artifacts
+                cleaned_text = d['text'].encode('ascii', 'ignore').decode('ascii')
+                source_info = f"[{d['source']}]"
+                if d.get('metadata', {}).get('category') == "Primary Symptom":
+                    source_info += " (PRIMARY SYMPTOM ENTRY)"
+                    has_symptom_data = True
                 
-                if modality == "unknown":
-                    escalation_reason = "Unsupported or ambiguous image modality."
-                elif use_confidence_scoring and modality_confidence < CONFIDENCE_THRESHOLD:
-                    escalation_reason = f"Low confidence in modality detection ({modality_confidence})."
-                
-                if escalation_reason and use_hitl_escalation:
-                    # HITL Escalation (Layer 5)
-                    print(f"🚨 HITL Escalation Triggered: {escalation_reason}")
-                    prompt_content = PROMPT_HITL_ESCALATION.format(escalation_reason=escalation_reason)
-                elif escalation_reason and not use_hitl_escalation:
-                    # HITL is disabled, but we have an escalation reason. 
-                    # Fallback to a safe general analysis instead of the specific HITL prompt.
-                    print(f"⚠️ HITL Disabled but escalation reason exists: {escalation_reason}. Falling back to general analysis.")
-                    prompt_content = PROMPT_MEDICAL_RAG.format(
-                        user_query=combined_input,
+                rag_data += f"- {source_info} {cleaned_text} (Title: {d['title']})\n"
+            
+            # ENHANCED FALLBACK: If this is a symptom query but RAG didn't return symptom data, add fallback
+            if detected_intent == "symptom_based" and not has_symptom_data:
+                fallback = get_symptom_fallback(combined_input)
+                if fallback:
+                    rag_data = f"[FALLBACK SYMPTOM DATA - Primary Source]\n{fallback}\n\n[Additional Context from Medical Database]\n{rag_data}"
+                    print(f"✅ Supplementing RAG data with symptom fallback for: {combined_input[:50]}...")
+        else:
+            # CRITICAL FALLBACK: Check for symptom fallback before failing
+            fallback = get_symptom_fallback(combined_input)
+            if fallback:
+                rag_data = f"[FALLBACK SYMPTOM DATA] {fallback}"
+                print(f"✅ Using symptom fallback for query: {combined_input[:50]}...")
+
+    # --- STEP 8: RETRIEVAL QUALITY CHECK ---
+    # Before calling expensive LLM, check if we have sufficient context
+    # If it's a symptom query and we have no data, use fallback directly
+    has_sufficient_context = True
+    
+    if detected_intent == "symptom_based":
+        # For symptom queries, we need either RAG data or fallback
+        if rag_data == "No verified medical information found for this specific query.":
+            # No RAG data - check if we have fallback
+            fallback = get_symptom_fallback(combined_input)
+            if fallback:
+                # Use fallback directly without LLM call (saves API cost)
+                print(f"⚡ QUALITY CHECK: Using fallback directly, skipping LLM for: {combined_input[:50]}...")
+                return json.dumps({
+                    "type": "health_report",
+                    "health_information": fallback,
+                    "possible_conditions": ["Various causes possible - not a diagnosis"],
+                    "reasoning_brief": "Providing general information about this symptom based on medical knowledge.",
+                    "recommended_next_steps": "Monitor your symptoms. Consult a healthcare professional if symptoms persist, worsen, or are accompanied by other concerning signs.",
+                    "ai_confidence": "High - General Symptom Information",
+                    "trusted_sources": ["Medical Knowledge Base", "MedlinePlus (NIH)"],
+                    "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
+                })
+            else:
+                has_sufficient_context = False
+
+    # --- STEP 7: Medical Report Generation (Medical RAG) ---
+    image_text = inputs.get("image_text", "") or ""
+    
+    try:
+        if is_report_analysis and is_image_analysis:
+            print("🧬 Using MULTIMODAL Analysis Mode")
+            prompt_content = PROMPT_REPORT_ANALYZER.format(
+                report_text=f"{report_text}\n\n[IMAGE OBSERVATIONS]\n{image_desc}\n\n[IMAGE TEXT (OCR)]\n{image_text}",
+                user_context=confirmed_context,
+                rag_data=rag_data
+            )
+        elif is_report_analysis:
+            print("📝 Using PROMPT_REPORT_ANALYZER")
+            prompt_content = PROMPT_REPORT_ANALYZER.format(
+                report_text=report_text,
+                user_context=confirmed_context,
+                rag_data=rag_data
+            )
+        elif is_image_analysis:
+            print(f"🖼️ Routing Image Analysis: {image_desc[:100]}...")
+            
+            # 1. Modality Detection (Layer 1)
+            modality_response = await call_llm_with_fallback(
+                messages=[{"role": "system", "content": PROMPT_MODALITY_DETECTOR.format(image_caption=image_desc)}],
+                response_format={"type": "json_object"}
+            )
+            
+            try:
+                modality_data = json.loads(modality_response)
+                modality = modality_data.get("modality", "unknown")
+                modality_confidence = modality_data.get("confidence", 0.0)
+                print(f"🔍 Detected Modality: {modality} (Confidence: {modality_confidence})")
+            except:
+                modality = "unknown"
+                modality_confidence = 0.0
+                print("⚠️ Failed to parse modality response, defaulting to unknown")
+
+            # 2. Model Router (Layer 2) & Confidence Gate (Layer 4)
+            CONFIDENCE_THRESHOLD = 0.6
+            escalation_reason = None
+            
+            if modality == "unknown":
+                escalation_reason = "Unsupported or ambiguous image modality."
+            elif modality_confidence < CONFIDENCE_THRESHOLD:
+                escalation_reason = f"Low confidence in modality detection ({modality_confidence})."
+            
+            if escalation_reason:
+                # HITL Escalation (Layer 5)
+                print(f"🚨 HITL Escalation Triggered: {escalation_reason}")
+                prompt_content = PROMPT_HITL_ESCALATION.format(escalation_reason=escalation_reason)
+            else:
+                # Route to Expert Model (Layer 3)
+                if modality == "radiology":
+                    print("🩻 Using PROMPT_RADIOLOGY_SPECIALIST")
+                    prompt_content = PROMPT_RADIOLOGY_SPECIALIST.format(
+                        image_caption=image_desc,
+                        image_text=image_text,
+                        user_context=confirmed_context,
+                        rag_data=rag_data
+                    )
+                elif modality == "dermatology":
+                    print("🧴 Using PROMPT_SKIN_SPECIALIST")
+                    prompt_content = PROMPT_SKIN_SPECIALIST.format(
+                        image_caption=image_desc,
+                        image_text=image_text,
+                        user_context=confirmed_context,
+                        rag_data=rag_data
+                    )
+                elif modality == "ophthalmology":
+                    print("👁️ Using PROMPT_EYE_SPECIALIST")
+                    prompt_content = PROMPT_EYE_SPECIALIST.format(
+                        image_caption=image_desc,
+                        image_text=image_text,
+                        user_context=confirmed_context,
+                        rag_data=rag_data
+                    )
+                elif modality == "medical_document":
+                    print("📄 Routing to Report Analysis Prompt (Image OCR)")
+                    # Use OCR text if available, otherwise fallback to caption
+                    doc_content = image_text if image_text else image_desc
+                    prompt_content = PROMPT_REPORT_ANALYZER.format(
+                        report_text=doc_content,
                         user_context=confirmed_context,
                         rag_data=rag_data
                     )
                 else:
-                    # Route to Expert Model (Layer 3)
-                    if modality == "radiology":
-                        print("🩻 Using PROMPT_RADIOLOGY_SPECIALIST")
-                        prompt_content = PROMPT_RADIOLOGY_SPECIALIST.format(
-                            image_caption=image_desc,
-                            user_context=confirmed_context,
-                            rag_data=rag_data
-                        )
-                    elif modality == "dermatology":
-                        print("🧴 Using PROMPT_SKIN_SPECIALIST")
-                        prompt_content = PROMPT_SKIN_SPECIALIST.format(
-                            image_caption=image_desc,
-                            user_context=confirmed_context,
-                            rag_data=rag_data
-                        )
-                    elif modality == "ophthalmology":
-                        print("👁️ Using PROMPT_EYE_SPECIALIST")
-                        prompt_content = PROMPT_EYE_SPECIALIST.format(
-                            image_caption=image_desc,
-                            user_context=confirmed_context,
-                            rag_data=rag_data
-                        )
-                    elif modality == "medical_document":
-                        print("📄 Routing to Report Analysis Prompt")
-                        prompt_content = PROMPT_REPORT_ANALYZER.format(
-                            report_text=image_desc,
-                            user_context=confirmed_context,
-                            rag_data=rag_data
-                        )
-                    else:
-                        print("🚨 Fallback to HITL for unhandled modality")
-                        prompt_content = PROMPT_HITL_ESCALATION.format(escalation_reason="Unhandled modality type.")
+                    print("🚨 Fallback to HITL for unhandled modality")
+                    prompt_content = PROMPT_HITL_ESCALATION.format(escalation_reason="Unhandled modality type.")
 
-                # Audit Log Modality (Layer 6)
-                await audit_logger.log_event(
-                    action="IMAGE_MODALITY_DETECTION",
-                    status="SUCCESS",
-                    user_id=user_id,
-                    request=request,
-                    metadata={
-                        "detected_modality": modality,
-                        "confidence": modality_confidence,
-                        "escalated": bool(escalation_reason)
-                    }
-                )
-            else:
-                print("🏥 Using PROMPT_MEDICAL_RAG")
-                prompt_content = PROMPT_MEDICAL_RAG.format(
-                    user_query=combined_input,
-                    user_context=confirmed_context,
-                    rag_data=rag_data
-                )
-                
-            final_response_content = await call_llm_with_fallback(
-                messages=[
-                    {"role": "system", "content": prompt_content}
-                ],
-                response_format={"type": "json_object"},
-                use_primary=True, # Use big model for final analysis, fallback if needed
-                allow_fallback=use_llm_fallback
-            )
-            # --- STEP 8: Feedback Refinement (Handled by feedback_router.py) ---
+            # Audit Log Modality (Layer 6)
             await audit_logger.log_event(
-                action="AI_QUERY",
+                action="IMAGE_MODALITY_DETECTION",
                 status="SUCCESS",
                 user_id=user_id,
                 request=request,
                 metadata={
-                    "model": LLM_MODEL,
-                    "intent": detected_intent,
-                    "is_report_analysis": is_report_analysis,
-                    "is_image_analysis": is_image_analysis,
-                    "has_voice": bool(voice_text),
-                    "has_image": bool(image_desc),
-                    "has_report": bool(report_text),
-                    "image_modality": modality if is_image_analysis else None,
-                    "is_escalated": bool(escalation_reason) if is_image_analysis else False
+                    "detected_modality": modality,
+                    "confidence": modality_confidence,
+                    "escalated": bool(escalation_reason)
                 }
             )
-            return final_response_content
-        except Exception as e:
-            print(f"❌ Final RAG Error: {e}")
-            await audit_logger.log_event(
-                action="AI_QUERY",
-                status="FAILURE",
-                user_id=user_id,
-                request=request,
-                metadata={"error": str(e), "model": LLM_MODEL}
+        else:
+            print("🏥 Using PROMPT_MEDICAL_RAG")
+            prompt_content = PROMPT_MEDICAL_RAG.format(
+                user_query=combined_input,
+                user_context=confirmed_context,
+                rag_data=rag_data
             )
-            print(f"❌ Error type: {type(e).__name__}")
-            print(f"❌ Query was: {combined_input[:100]}")
-            import traceback
-            traceback.print_exc()
             
-            # LAST RESORT FALLBACK: Try symptom fallback even if LLM fails
-            fallback = get_symptom_fallback(combined_input)
-            if fallback:
-                return json.dumps({
-                    "type": "health_report",
-                    "health_information": fallback,
-                    "possible_conditions": ["Various causes possible"],
-                    "reasoning_brief": "Using general symptom information due to system limitations.",
-                    "recommended_next_steps": "Consult a healthcare professional for personalized advice.",
-                    "ai_confidence": "Medium - General Information",
-                    "trusted_sources": ["Medical Knowledge Base"],
-                    "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
-                })
-            
+        final_response_content = await call_llm_with_fallback(
+            messages=[
+                {"role": "system", "content": prompt_content}
+            ],
+            response_format={"type": "json_object"},
+            use_primary=True # Use big model for final analysis, fallback if needed
+        )
+        # --- STEP 8: Feedback Refinement (Handled by feedback_router.py) ---
+        await audit_logger.log_event(
+            action="AI_QUERY",
+            status="SUCCESS",
+            user_id=user_id,
+            request=request,
+            metadata={
+                "model": LLM_MODEL,
+                "intent": detected_intent,
+                "is_report_analysis": is_report_analysis,
+                "is_image_analysis": is_image_analysis,
+                "has_voice": bool(voice_text),
+                "has_image": bool(image_desc),
+                "has_report": bool(report_text),
+                "image_modality": modality if is_image_analysis else None,
+                "is_escalated": bool(escalation_reason) if is_image_analysis else False
+            }
+        )
+        return final_response_content
+    except Exception as e:
+        print(f"❌ Final RAG Error: {e}")
+        await audit_logger.log_event(
+            action="AI_QUERY",
+            status="FAILURE",
+            user_id=user_id,
+            request=request,
+            metadata={"error": str(e), "model": LLM_MODEL}
+        )
+        print(f"❌ Error type: {type(e).__name__}")
+        print(f"❌ Query was: {combined_input[:100]}")
+        import traceback
+        traceback.print_exc()
+        
+        # LAST RESORT FALLBACK: Try symptom fallback even if LLM fails
+        fallback = get_symptom_fallback(combined_input)
+        if fallback:
             return json.dumps({
                 "type": "health_report",
-                "health_information": "I encountered an error while processing your request. Please try again or consult a professional.",
-                "ai_confidence": "Low - System Error",
-                "disclaimer": "This is not a diagnosis. Consult a professional."
+                "health_information": fallback,
+                "possible_conditions": ["Various causes possible"],
+                "reasoning_brief": "Using general symptom information due to system limitations.",
+                "recommended_next_steps": "Consult a healthcare professional for personalized advice.",
+                "ai_confidence": "Medium - General Information",
+                "trusted_sources": ["Medical Knowledge Base"],
+                "disclaimer": "This is for informational purposes and not a diagnosis. Consult a professional."
             })
-    finally:
-        db.close()
+        
+        return json.dumps({
+            "type": "health_report",
+            "health_information": "I encountered an error while processing your request. Please try again or consult a professional.",
+            "ai_confidence": "Low - System Error",
+            "disclaimer": "This is not a diagnosis. Consult a professional."
+        })
 

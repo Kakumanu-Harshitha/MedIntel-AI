@@ -35,6 +35,34 @@ graph TD
 ### 1.2 Routing Graph
 ```mermaid
 graph LR
+    subgraph Frontend ["Frontend Routes"]
+        Home["/"]
+        Login["/login"]
+        Chat["/assessment"]
+        Profile["/profile"]
+        Reports["/reports"]
+        OwnerDash["/owner/dashboard"]
+    end
+
+    subgraph Backend ["Backend Endpoints"]
+        AuthAPI["/auth/*"]
+        ProfileAPI["/profile/*"]
+        QueryAPI["/query/*"]
+        ReportAPI["/report/*"]
+        OwnerAPI["/owner/*"]
+        SecurityAPI["/security/*"]
+    end
+
+    Home --> Chat
+    Login --> Chat
+    Chat --> Backend
+    Profile --> Backend
+    Reports --> Backend
+    OwnerDash --> Backend
+```
+
+```mermaid
+graph LR
     subgraph Frontend Routes
         Home[/]
         Login[/login]

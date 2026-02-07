@@ -61,33 +61,7 @@ graph LR
     OwnerDash --> Backend
 ```
 
-```mermaid
-graph LR
-    subgraph Frontend Routes
-        Home[/]
-        Login[/login]
-        Chat[/assessment]
-        Profile[/profile]
-        Reports[/reports]
-        OwnerDash[/owner/dashboard]
-    end
 
-    subgraph Backend Endpoints
-        AuthAPI[/auth/*]
-        ProfileAPI[/profile/*]
-        QueryAPI[/query/*]
-        ReportAPI[/report/*]
-        OwnerAPI[/owner/*]
-        SecurityAPI[/security/*]
-    end
-
-    Home --> Chat
-    Login --> Chat
-    Chat --> Backend
-    Profile --> Backend
-    Reports --> Backend
-    OwnerDash --> Backend
-```
 
 ### 1.3 Query Processing Flow
 ```mermaid
@@ -112,7 +86,6 @@ sequenceDiagram
     F->>U: Display Report + Play TTS
 ```
 
----
 
 ## 2. System Boundaries & Layered Architecture
 

@@ -129,116 +129,154 @@ def normalize_report_data(data: dict) -> dict:
 class HealthReportPDF(FPDF):
     def __init__(self):
         super().__init__()
-        self.set_auto_page_break(auto=True, margin=15)
+        self.set_auto_page_break(auto=True, margin=20)
+        self.brand_primary = (13, 110, 253)    # Brand Blue
+        self.brand_secondary = (108, 117, 125) # Secondary Gray
+        self.brand_accent = (25, 135, 84)      # Success Green
+        self.brand_danger = (220, 53, 69)      # Danger Red
+        self.brand_text = (33, 37, 41)         # Dark text
+        self.brand_bg = (248, 249, 250)        # Light background
 
     def header(self):
-        # HEADER CONTENT 
+        # Draw a subtle background for the header
         self.set_fill_color(255, 255, 255)
-        self.rect(0, 0, 210, 40, 'F')
+        self.rect(0, 0, 210, 45, 'F')
         
-        # App Name (Left/Center aligned)
-        self.set_font("Helvetica", "B", 20)
-        self.set_text_color(44, 62, 80) # Dark Blue
-        self.set_xy(12, 12)
-        self.cell(0, 10, "HealthGuide AI", ln=True)
+        # Brand Logo/Name
+        self.set_font("Helvetica", "B", 24)
+        self.set_text_color(*self.brand_primary)
+        self.set_xy(15, 15)
+        self.cell(100, 12, "HealthGuide AI", ln=False)
         
-        self.set_font("Helvetica", "I", 10)
-        self.set_text_color(127, 140, 141) # Gray
-        self.set_xy(12, 22)
-        self.cell(0, 6, "AI Health Assistant - Preliminary Guidance", ln=True)
+        # Subtitle
+        self.set_font("Helvetica", "", 10)
+        self.set_text_color(*self.brand_secondary)
+        self.set_xy(15, 27)
+        self.cell(100, 5, "Personalized Clinical Insight & Assessment", ln=True)
 
-        # Date (Right)
+        # Date & Metadata (Right Aligned)
+        self.set_font("Helvetica", "B", 9)
+        self.set_text_color(70, 70, 70)
+        self.set_xy(140, 16)
+        self.cell(55, 5, f"REPORT DATE: {datetime.now().strftime('%d %b %Y')}", align="R", ln=True)
         self.set_font("Helvetica", "", 9)
         self.set_text_color(100, 100, 100)
-        self.set_xy(150, 15)
-        self.cell(50, 6, f"Date: {datetime.now().strftime('%Y-%m-%d')}", align="R")
-        self.set_xy(150, 20)
-        self.cell(50, 6, f"Time: {datetime.now().strftime('%H:%M')}", align="R")
+        self.set_x(140)
+        self.cell(55, 5, f"REF: HGAI-{datetime.now().strftime('%Y%m%d')}-01", align="R", ln=True)
 
-        # Separator line
-        self.set_draw_color(52, 152, 219) # Primary Blue
-        self.set_line_width(0.5)
-        self.line(10, 35, 200, 35)
-        self.ln(30)
+        # Gradient separator line
+        self.set_draw_color(*self.brand_primary)
+        self.set_line_width(1)
+        self.line(15, 40, 195, 40)
+        self.ln(35)
 
-    def section_title(self, title: str):
-        self.set_font("Helvetica", "B", 14)
-        self.set_text_color(44, 62, 80)
-        self.set_fill_color(236, 240, 241) # Light Gray
+    def section_title(self, title: str, icon_color=None):
+        if not icon_color:
+            icon_color = self.brand_primary
+            
+        self.set_font("Helvetica", "B", 13)
+        self.set_text_color(*icon_color)
+        self.set_fill_color(245, 247, 250)
+        
+        # Vertical accent line
+        self.set_draw_color(*icon_color)
+        self.set_line_width(1.5)
+        curr_y = self.get_y()
+        self.line(15, curr_y, 15, curr_y + 10)
+        
+        self.set_x(18)
         self.cell(0, 10, f"  {title.upper()}", ln=True, fill=True)
-        self.ln(4)
+        self.ln(5)
 
     def content_text(self, text: str):
         self.set_font("Helvetica", "", 11)
-        self.set_text_color(50, 50, 50)
-        self.multi_cell(0, 6, sanitize(text))
-        self.ln(4)
+        self.set_text_color(*self.brand_text)
+        self.set_x(20)
+        self.multi_cell(0, 7, sanitize(text))
+        self.ln(5)
         
     def profile_section(self, profile: dict, bmi: str, risk: str):
-        self.section_title("Patient Profile")
+        self.section_title("Patient Information")
         
-        self.set_font("Helvetica", "", 11)
+        # Create a nice rounded box/grid for patient info
+        self.set_fill_color(255, 255, 255)
+        self.set_draw_color(230, 233, 237)
+        self.set_line_width(0.2)
         
-        # Profile Grid
-        col_width = 45
-        row_height = 8
+        start_x = 18
+        start_y = self.get_y()
+        self.rect(start_x, start_y, 177, 35, 'D')
         
-        # Row 1
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*self.brand_secondary)
+        
+        # Column 1
+        self.set_xy(start_x + 5, start_y + 5)
+        self.cell(40, 8, "EMAIL ADDRESS")
+        self.set_xy(start_x + 5, start_y + 12)
         self.set_font("Helvetica", "B", 11)
-        self.cell(col_width, row_height, "Email:", border=0)
-        self.set_font("Helvetica", "", 11)
-        self.cell(col_width, row_height, sanitize(profile.get('email', 'N/A')), border=0)
+        self.set_text_color(*self.brand_text)
+        self.cell(80, 8, sanitize(profile.get('email', 'N/A')))
         
+        # Column 2
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*self.brand_secondary)
+        self.set_xy(start_x + 90, start_y + 5)
+        self.cell(40, 8, "AGE / GENDER")
+        self.set_xy(start_x + 90, start_y + 12)
         self.set_font("Helvetica", "B", 11)
-        self.cell(col_width, row_height, "Age / Gender:", border=0)
-        self.set_font("Helvetica", "", 11)
-        self.cell(col_width, row_height, f"{profile.get('age', 'N/A')} / {profile.get('gender', 'N/A')}", border=0, ln=True)
+        self.set_text_color(*self.brand_text)
+        self.cell(80, 8, f"{profile.get('age', 'N/A')} / {profile.get('gender', 'N/A')}")
         
         # Row 2
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*self.brand_secondary)
+        self.set_xy(start_x + 5, start_y + 22)
+        self.cell(40, 8, "VITAL STATS")
+        self.set_xy(start_x + 5, start_y + 28)
         self.set_font("Helvetica", "B", 11)
-        self.cell(col_width, row_height, "Height / Weight:", border=0)
-        self.set_font("Helvetica", "", 11)
-        self.cell(col_width, row_height, f"{profile.get('height_cm', 'N/A')}cm / {profile.get('weight_kg', 'N/A')}kg", border=0)
+        self.set_text_color(*self.brand_text)
+        self.cell(80, 8, f"{profile.get('height_cm', 'N/A')}cm | {profile.get('weight_kg', 'N/A')}kg | BMI: {bmi}")
         
-        self.set_font("Helvetica", "B", 11)
-        self.cell(col_width, row_height, "BMI:", border=0)
-        self.set_font("Helvetica", "", 11)
-        self.cell(col_width, row_height, str(bmi), border=0, ln=True)
-        
-        self.ln(4)
-        
-        # Risk Rating Badge
-        self.set_font("Helvetica", "B", 12)
-        self.cell(30, 10, "Risk Rating:", border=0)
-        
-        # Color coding for risk
+        # Risk Rating (Right Aligned in the box)
         risk_upper = risk.upper()
-        if "HIGH" in risk_upper or "EMERGENCY" in risk_upper:
-            self.set_fill_color(231, 76, 60) # Red
-            self.set_text_color(255, 255, 255)
-        elif "MODERATE" in risk_upper or "MEDIUM" in risk_upper:
-            self.set_fill_color(241, 196, 15) # Yellow/Orange
-            self.set_text_color(50, 50, 50)
+        if any(kw in risk_upper for kw in ["HIGH", "EMERGENCY", "SEVERE"]):
+            badge_color = self.brand_danger
+            badge_text = "HIGH RISK"
+        elif any(kw in risk_upper for kw in ["MODERATE", "MEDIUM"]):
+            badge_color = (255, 152, 0) # Amber
+            badge_text = "MODERATE RISK"
         else:
-            self.set_fill_color(46, 204, 113) # Green
-            self.set_text_color(255, 255, 255)
+            badge_color = self.brand_accent
+            badge_text = "LOW RISK"
             
-        self.cell(40, 8, f"  {risk_upper}  ", border=0, fill=True, align="C")
-        self.set_text_color(0, 0, 0) # Reset
-        self.ln(10)
+        self.set_fill_color(*badge_color)
+        self.set_text_color(255, 255, 255)
+        self.set_xy(start_x + 135, start_y + 22)
+        self.cell(35, 8, badge_text, border=0, fill=True, align="C")
+        
+        self.set_xy(15, start_y + 40)
+        self.ln(5)
 
     def footer(self):
-        self.set_y(-25)
-        self.set_draw_color(200, 200, 200)
-        self.line(10, self.get_y(), 200, self.get_y())
-        self.ln(2)
+        self.set_y(-30)
+        # Background for footer
+        self.set_fill_color(248, 249, 250)
+        self.rect(0, 267, 210, 30, 'F')
+        
+        self.set_draw_color(220, 220, 220)
+        self.line(15, self.get_y(), 195, self.get_y())
+        self.ln(4)
         
         self.set_font("Helvetica", "I", 8)
-        self.set_text_color(128, 128, 128)
-        self.multi_cell(0, 4, "DISCLAIMER: This report is generated by an AI system for informational purposes only. It is NOT a medical diagnosis. Always consult a qualified healthcare provider.", align="C")
+        self.set_text_color(100, 100, 100)
+        self.set_x(15)
+        self.multi_cell(180, 4, "NOTICE: This AI-generated report provides clinical decision support and preliminary insights. It is NOT a substitute for professional medical advice, diagnosis, or treatment. Confidential medical data.", align="C")
         
         self.set_y(-10)
-        self.cell(0, 10, f"Page {self.page_no()}", align="C")
+        self.set_font("Helvetica", "B", 8)
+        self.set_text_color(150, 150, 150)
+        self.cell(0, 10, f"PAGE {self.page_no()} | HEALTHGUIDE AI - PROPRIETARY", align="C")
 
 # REPORT ENDPOINT
 @router.get("/user/{email}")
@@ -371,25 +409,35 @@ async def generate_user_report(
         pdf.ln(4)
 
     # Recommendations
-    pdf.section_title("Recommendations")
+    pdf.section_title("Clinical Recommendations")
     if report["recommendations"]:
         for rec in report["recommendations"]:
-            pdf.cell(5)
-            pdf.multi_cell(0, 6, f"- {sanitize(str(rec))}")
-            pdf.ln(1)
+            pdf.set_x(20)
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(*pdf.brand_primary)
+            pdf.cell(5, 7, chr(149), ln=0) # Bullet
+            pdf.set_font("Helvetica", "", 11)
+            pdf.set_text_color(*pdf.brand_text)
+            pdf.multi_cell(0, 7, sanitize(str(rec)))
+            pdf.ln(2)
     
     # Food & Diet
     if report["food_advice"]:
-        pdf.section_title("Food & Diet Recommendations")
+        pdf.section_title("Nutrition & Dietary Guide", icon_color=(255, 152, 0))
         for item in report["food_advice"]:
-            pdf.cell(5)
-            pdf.multi_cell(0, 6, f"- {sanitize(str(item))}")
-            pdf.ln(1)
-
+            pdf.set_x(20)
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(255, 152, 0)
+            pdf.cell(5, 7, chr(149), ln=0)
+            pdf.set_font("Helvetica", "", 11)
+            pdf.set_text_color(*pdf.brand_text)
+            pdf.multi_cell(0, 7, sanitize(str(item)))
+            pdf.ln(2)
+    
     # Trusted Sources
     if report.get("sources"):
-        pdf.ln(4)
-        pdf.section_title("Trusted Medical Sources")
+        pdf.ln(5)
+        pdf.section_title("Verified Clinical Sources")
         for src in report["sources"]:
             # Handle both dict (new schema) and string (fallback)
             if isinstance(src, dict):
@@ -399,43 +447,56 @@ async def generate_user_report(
                 source_name = "Source"
                 desc = str(src)
 
+            pdf.set_x(20)
             pdf.set_font("Helvetica", "B", 10)
-            pdf.set_text_color(41, 128, 185) # Blue
-            pdf.cell(0, 5, f"- {sanitize(source_name)}", ln=True)
+            pdf.set_text_color(*pdf.brand_primary)
+            pdf.cell(0, 6, f"{sanitize(source_name)}", ln=True)
             
-            pdf.set_font("Helvetica", "", 10)
+            pdf.set_x(25)
+            pdf.set_font("Helvetica", "I", 10)
             pdf.set_text_color(80, 80, 80)
-            pdf.multi_cell(0, 5, f"  {sanitize(desc)}")
-            pdf.ln(2)
+            pdf.multi_cell(0, 5, f"{sanitize(desc)}")
+            pdf.ln(3)
 
-    # Disclaimer
-    pdf.ln(10)
-    pdf.set_font("Helvetica", "I", 9)
-    pdf.set_text_color(150, 150, 150)
-    pdf.multi_cell(0, 5, "DISCLAIMER: This report is generated by AI for informational purposes only. It is NOT a medical diagnosis. Always consult a qualified healthcare provider for any medical concerns.")
-    
     # Red Flags / Immediate Action
     if report["red_flags"]:
-        pdf.ln(4)
-        pdf.set_fill_color(255, 235, 238) # Light Red
-        pdf.set_text_color(198, 40, 40)   # Dark Red
+        pdf.ln(5)
+        pdf.set_fill_color(*pdf.brand_danger)
+        pdf.set_text_color(255, 255, 255)
         pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 10, "  IMMEDIATE ATTENTION REQUIRED", ln=True, fill=True)
-        pdf.set_text_color(198, 40, 40)
-        pdf.set_font("Helvetica", "", 11)
+        pdf.set_x(15)
+        pdf.cell(180, 10, "  IMMEDIATE CLINICAL ATTENTION REQUIRED", ln=True, fill=True)
+        pdf.set_text_color(*pdf.brand_danger)
+        pdf.set_font("Helvetica", "B", 11)
         for flag in report["red_flags"]:
-            pdf.cell(5)
-            pdf.multi_cell(0, 6, f">> {sanitize(str(flag))}")
-        pdf.ln(4)
+            pdf.set_x(20)
+            pdf.multi_cell(0, 7, f">> {sanitize(str(flag))}")
+        pdf.ln(5)
         
     # Output
-    pdf_content = pdf.output(dest='S').encode('latin-1')
-    pdf_buffer = BytesIO(pdf_content)
-    
-    filename = f"HealthReport_{email}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    
-    return StreamingResponse(
-        pdf_buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+    try:
+        # FPDF output(dest='S') returns a byte-string in latin-1 or a string depending on version/config.
+        # We need to ensure it's handled as bytes for the StreamingResponse.
+        pdf_output = pdf.output(dest='S')
+        
+        # If output is a string, encode it to bytes. If it's already bytes, use as is.
+        if isinstance(pdf_output, str):
+            pdf_content = pdf_output.encode('latin-1')
+        else:
+            pdf_content = pdf_output
+            
+        pdf_buffer = BytesIO(pdf_content)
+        
+        filename = f"HealthReport_{email}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
+    except Exception as e:
+        print(f"❌ PDF Generation Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")

@@ -12,13 +12,15 @@ groq
 python-multipart
 torch
 transformers
-open_clip_torch
+open-clip-torch
 fpdf
 passlib==1.7.4 
 bcrypt==3.2.2
 pinecone
 sentence-transformers
 numpy
+pypdf
+timm
 pyotp
 qrcode
 cryptography

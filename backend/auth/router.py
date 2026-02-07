@@ -8,12 +8,12 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 load_dotenv()
-from .database import get_db
-from .models import User
-from .schemas import TokenOut, UserCreate, RefreshTokenIn, ForgotPasswordRequest, PasswordResetConfirm
-from .audit_logger import audit_logger
-from .email_service import email_service
-from .models import PasswordResetToken
+from ..database import get_db
+from ..models import User
+from ..schemas import TokenOut, UserCreate, RefreshTokenIn, ForgotPasswordRequest, PasswordResetConfirm
+from ..audit_logger import audit_logger
+from ..email_service import email_service
+from ..models import PasswordResetToken
 import secrets
 import hashlib
 

@@ -5,7 +5,15 @@
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Groq](https://img.shields.io/badge/Groq-Llama_3-orange?style=for-the-badge)](https://groq.com/)
 
-An advanced, "Google-Level" multimodal AI Health Assistant designed to provide preliminary clinical insights using text, voice, and image analysis. Built with high-performance FastAPI and a modern React interface.
+A professional-grade multimodal AI Health Assistant that bridges the gap between patient queries and clinical insights. Leveraging state-of-the-art LLMs, voice processing, and computer vision, this system provides a comprehensive health companion experience.
+
+## 🎯 Why AI Health Assistant? 
+This project demonstrates real-world skills in: 
+- **LLM Routing + Deterministic Intent Detection**: Sophisticated logic to handle diverse health queries with high accuracy.
+- **Multimodal AI (Text + Voice + Image)**: Seamless integration of multiple data formats for a holistic health assessment.
+- **Secure Authentication (JWT)**: Industry-standard security for protecting sensitive user health data.
+- **Database Engineering (PostgreSQL + MongoDB)**: Efficient management of structured profiles and unstructured conversation history.
+- **Production-Style Backend Architecture**: Scalable, modular design following enterprise software patterns.
 
 ---
 
@@ -128,7 +136,7 @@ Ai_health_assistant/
 ---
 
 ## 📊 System Architecture
-For a deep dive into the routing graph, query processing flow, and data schemas, please refer to the [ARCHITECTURE.md](file:///d:/Ai_health_assistant/ARCHITECTURE.md) file.
+For a deep dive into the routing graph, query processing flow, and data schemas, please refer to the [ARCHITECTURE.md](./ARCHITECTURE.md)file.
 
 ---
 

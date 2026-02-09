@@ -9,10 +9,11 @@ A professional-grade multimodal AI Health Assistant that bridges the gap between
 
 ## 🎯 Why AI Health Assistant? 
 This project demonstrates real-world skills in: 
+- **RAG-Driven Clinical Knowledge**: Integration with Pinecone vector database for evidence-based condition explanations using MedlinePlus and WHO data.
 - **LLM Routing + Deterministic Intent Detection**: Sophisticated logic to handle diverse health queries with high accuracy.
 - **Multimodal AI (Text + Voice + Image)**: Seamless integration of multiple data formats for a holistic health assessment.
 - **Secure Authentication (JWT)**: Industry-standard security for protecting sensitive user health data.
-- **Database Engineering (PostgreSQL + MongoDB)**: Efficient management of structured profiles and unstructured conversation history.
+- **Database Engineering (PostgreSQL + MongoDB + Pinecone)**: Efficient management of structured profiles, unstructured history, and high-dimensional vector embeddings.
 - **Production-Style Backend Architecture**: Scalable, modular design following enterprise software patterns.
 
 ---
@@ -24,16 +25,17 @@ This project demonstrates real-world skills in:
 
 ## 🌟 Key Features
 
-### 🎙️ Multimodal Intelligence
-- **Text & Voice:** Seamlessly switch between typing and recording queries using the Web Speech API.
-- **Medical Image Analysis:** Upload images (e.g., skin conditions, reports) for preliminary AI visual inspection.
-- **Audio TTS:** Receive audible responses for an accessible user experience.
-
 ### 🧠 Advanced Reasoning Engine
+- **RAG-Powered Explanations:** Automatically retrieves and explains medical conditions (Symptoms, Causes, Management) using verified sources.
 - **Clinical Triage:** Categorizes queries into LOW, MEDIUM, HIGH, or EMERGENCY severity.
 - **Explainable AI (XAI):** Provides detailed reasoning for every health insight, citing profile and history factors.
 - **Dynamic Recommendations:** Generates tailored lifestyle, nutrition, and immediate action advice.
 - **HITL (Human-in-the-Loop):** Critical queries are flagged for escalation to medical specialists.
+
+### 🎙️ Multimodal Intelligence
+- **Text & Voice:** Seamlessly switch between typing and recording queries using the Web Speech API.
+- **Medical Image Analysis:** Upload images (e.g., skin conditions, reports) for preliminary AI visual inspection.
+- **Audio TTS:** Receive audible responses for an accessible user experience.
 
 ### 🔒 Security & Privacy
 - **Secure Auth:** JWT-based authentication with protected routes.
@@ -51,6 +53,8 @@ This project demonstrates real-world skills in:
 ### Backend
 - **Framework:** FastAPI (Asynchronous Python)
 - **AI/LLM:** Groq (Llama 3.3 70B), Transformers (BLIP for Vision)
+- **Vector DB:** Pinecone (Semantic Search)
+- **Embeddings:** Sentence-Transformers (`all-mpnet-base-v2`)
 - **Databases:** PostgreSQL (User Profiles), MongoDB (Conversation History)
 - **Auth:** Python-Jose (JWT), Passlib (Bcrypt)
 - **Services:** FPDF (Reports), gTTS (Speech), SMTP (Emails)
@@ -68,6 +72,10 @@ This project demonstrates real-world skills in:
 Ai_health_assistant/
 ├── backend/                # FastAPI Backend Implementation
 │   ├── auth/               # JWT & Security logic
+│   ├── rag_router.py       # Intent-based RAG Routing
+│   ├── rag_service.py      # Pinecone Vector Search
+│   ├── medical_ingester.py # Data Ingestion Pipeline
+│   ├── disease_urls.json   # Trusted Medical Sources
 │   ├── llm_service.py      # Core AI Reasoning Engine
 │   ├── query_service.py    # Multimodal processing
 │   ├── report_router.py    # PDF Report generation

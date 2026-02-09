@@ -10,6 +10,7 @@ class TokenOut(BaseModel):
     token_type: str
     user_id: int
     email: str
+    role: str
 
 class RefreshTokenIn(BaseModel):
     refresh_token: str
@@ -17,9 +18,11 @@ class RefreshTokenIn(BaseModel):
 class UserCreate(BaseModel):
     email: str
     password: str
+    patient_name: Optional[str] = None
 
 # --- Profile schemas ---
 class ProfileIn(BaseModel):
+    patient_name: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
     weight_kg: Optional[float] = None

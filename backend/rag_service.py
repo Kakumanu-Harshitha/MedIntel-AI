@@ -110,10 +110,10 @@ class RAGService:
         except Exception as e:
             print(f"❌ Upsert Error: {e}")
 
-    def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search(self, query: str, top_k: int = 5, namespace: str = None, filter: Dict = None) -> List[Dict[str, Any]]:
         """
-        Retrieves relevant documents with hard-coded source priority ranking:
-        Drug Interaction (Safety) > MedlinePlus (Patient Education) > ICD-11 (Taxonomy) > PubMed (Research)
+        Retrieves relevant documents with hard-coded source priority ranking.
+        Supports namespace filtering and metadata filters (e.g., testKey).
         """
         if not self.enabled:
             return []
@@ -164,10 +164,14 @@ class RAGService:
             # 1. Fetch more candidates than requested to allow for re-ranking
             fetch_k = max(top_k * 3, 15)
             query_vector = self.get_embedding(query)
+            
+            # Query with optional namespace and filter
             results = self.index.query(
                 vector=query_vector,
                 top_k=fetch_k,
-                include_metadata=True
+                include_metadata=True,
+                namespace=namespace,
+                filter=filter
             )
             
             candidates = []

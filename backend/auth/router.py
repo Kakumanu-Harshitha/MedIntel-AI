@@ -9,37 +9,19 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 load_dotenv()
 from ..database import get_db
-from ..models import User
+from ..models import User, Profile
 from ..schemas import TokenOut, UserCreate, RefreshTokenIn, ForgotPasswordRequest, PasswordResetConfirm
 from ..audit_logger import audit_logger
 from ..email_service import email_service
 from ..models import PasswordResetToken
+from .jwt_handler import create_access_token, create_refresh_token, verify_token, SECRET_KEY, ALGORITHM
+from .user_auth import get_current_user
+from .oauth_config import oauth2_scheme
 import secrets
 import hashlib
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# JWT config
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError("FATAL ERROR: JWT_SECRET_KEY must be set in the .env file.")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def create_refresh_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 @router.post("/signup", response_model=TokenOut)
 async def signup(payload: UserCreate, request: Request, db: Session = Depends(get_db)):
@@ -59,6 +41,11 @@ async def signup(payload: UserCreate, request: Request, db: Session = Depends(ge
     db.commit()
     db.refresh(user)
     
+    # Create profile with patient name
+    profile = Profile(email=user.email, patient_name=payload.patient_name)
+    db.add(profile)
+    db.commit()
+    
     await audit_logger.log_event(
         action="USER_SIGNUP",
         status="SUCCESS",
@@ -74,7 +61,8 @@ async def signup(payload: UserCreate, request: Request, db: Session = Depends(ge
         "refresh_token": refresh_token,
         "token_type": "bearer", 
         "user_id": user.id, 
-        "email": user.email
+        "email": user.email,
+        "role": user.role
     }
 
 @router.post("/login", response_model=TokenOut)
@@ -105,36 +93,23 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         "refresh_token": refresh_token,
         "token_type": "bearer", 
         "user_id": user.id, 
-        "email": user.email
+        "email": user.email, 
+        "role": user.role
     }
 
 @router.post("/refresh", response_model=TokenOut)
 async def refresh_token(payload: RefreshTokenIn, request: Request, db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, 
-        detail="Could not validate refresh token", 
-        headers={"WWW-Authenticate": "Bearer"}
-    )
     try:
-        decoded_payload = jwt.decode(payload.refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded_payload = verify_token(payload.refresh_token, token_type="refresh")
         email: str = decoded_payload.get("sub")
-        token_type: str = decoded_payload.get("type")
-        if email is None or token_type != "refresh":
-            await audit_logger.log_event(
-                action="TOKEN_REFRESH",
-                status="FAILURE",
-                request=request,
-                metadata={"reason": "Invalid token type or missing email"}
-            )
-            raise credentials_exception
-    except JWTError:
+    except HTTPException as e:
         await audit_logger.log_event(
             action="TOKEN_REFRESH",
             status="FAILURE",
             request=request,
-            metadata={"reason": "JWT decode error"}
+            metadata={"reason": str(e.detail)}
         )
-        raise credentials_exception
+        raise e
         
     user = db.query(User).filter(User.email == email).first()
     if user is None:
@@ -144,7 +119,11 @@ async def refresh_token(payload: RefreshTokenIn, request: Request, db: Session =
             request=request,
             metadata={"email": email, "reason": "User not found"}
         )
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="User not found", 
+            headers={"WWW-Authenticate": "Bearer"}
+        )
         
     await audit_logger.log_event(
         action="TOKEN_REFRESH",
@@ -162,23 +141,9 @@ async def refresh_token(payload: RefreshTokenIn, request: Request, db: Session =
         "refresh_token": new_refresh_token,
         "token_type": "bearer", 
         "user_id": user.id, 
-        "email": user.email
+        "email": user.email,
+        "role": user.role
     }
-
-# Dependency to get user object from token
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    user = db.query(User).filter(User.email == email).first()
-    if user is None:
-        raise credentials_exception
-    return user
 
 @router.post("/logout")
 async def logout(request: Request, current_user: User = Depends(get_current_user)):
@@ -209,7 +174,7 @@ async def forgot_password(payload: ForgotPasswordRequest, request: Request, db: 
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         
         # 2. Set expiry (15 minutes)
-        expiry = datetime.utcnow() + timedelta(minutes=15)
+        expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
         
         # 3. Store hashed token
         reset_token = PasswordResetToken(
@@ -252,7 +217,7 @@ async def reset_password(payload: PasswordResetConfirm, request: Request, db: Se
     reset_entry = db.query(PasswordResetToken).filter(
         PasswordResetToken.token_hash == token_hash,
         PasswordResetToken.used == 0,
-        PasswordResetToken.expires_at > datetime.utcnow()
+        PasswordResetToken.expires_at > datetime.now(timezone.utc)
     ).first()
     
     if not reset_entry:

@@ -1,9 +1,9 @@
 # backend/dashboard_service.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
-from .mongo_memory import get_full_history_for_dashboard, clear_user_memory
+from .mongo_memory import get_full_history_for_dashboard, get_reports_history, clear_user_memory
 from .auth import get_current_user
-from .models import User, AuditLog
+from .models import User, AuditLog, Profile
 from .database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -32,8 +32,47 @@ def get_audit_logs(
     return logs
 
 @router.get("/history", response_model=List[Dict[str, Any]])
-def get_user_history(current_user: User = Depends(get_current_user)):
-    return get_full_history_for_dashboard(str(current_user.id), limit=100)
+def get_user_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        history = get_full_history_for_dashboard(str(current_user.id), limit=100)
+        
+        # Get patient name from profile
+        profile = db.query(Profile).filter(Profile.email == current_user.email).first()
+        patient_name = profile.patient_name if (profile and profile.patient_name) else "Patient"
+        
+        # Inject patient name into history
+        if history:
+            for msg in history:
+                if isinstance(msg, dict):
+                    msg["patient_name"] = patient_name
+            
+        return history
+    except Exception as e:
+        print(f"❌ Error in get_user_history: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+@router.get("/reports", response_model=List[Dict[str, Any]])
+def get_user_reports(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Returns only messages that are qualified as reports.
+    """
+    try:
+        reports = get_reports_history(str(current_user.id), limit=100)
+        
+        # Get patient name from profile
+        profile = db.query(Profile).filter(Profile.email == current_user.email).first()
+        patient_name = profile.patient_name if (profile and profile.patient_name) else "Patient"
+        
+        # Inject patient name into reports
+        if reports:
+            for report in reports:
+                if isinstance(report, dict):
+                    report["patient_name"] = patient_name
+            
+        return reports
+    except Exception as e:
+        print(f"❌ Error in get_user_reports: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.delete("/history")
 def clear_history(current_user: User = Depends(get_current_user)):

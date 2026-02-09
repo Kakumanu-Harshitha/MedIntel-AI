@@ -125,10 +125,11 @@ def normalize_report_data(data: dict) -> dict:
 
     return normalized
 
-# PDF CLASS WITH MEDICAL GRADE STYLING
+    # PDF CLASS WITH MEDICAL GRADE STYLING
 class HealthReportPDF(FPDF):
-    def __init__(self):
+    def __init__(self, metadata=None):
         super().__init__()
+        self.metadata = metadata or {}
         self.set_auto_page_break(auto=True, margin=20)
         self.brand_primary = (13, 110, 253)    # Brand Blue
         self.brand_secondary = (108, 117, 125) # Secondary Gray
@@ -158,11 +159,25 @@ class HealthReportPDF(FPDF):
         self.set_font("Helvetica", "B", 9)
         self.set_text_color(70, 70, 70)
         self.set_xy(140, 16)
-        self.cell(55, 5, f"REPORT DATE: {datetime.now().strftime('%d %b %Y')}", align="R", ln=True)
+        
+        report_date = self.metadata.get("created_at")
+        if report_date:
+            if isinstance(report_date, str):
+                try:
+                    report_date = datetime.fromisoformat(report_date.replace('Z', '+00:00'))
+                except:
+                    report_date = datetime.now()
+            date_str = report_date.strftime('%d %b %Y')
+        else:
+            date_str = datetime.now().strftime('%d %b %Y')
+            
+        self.cell(55, 5, f"REPORT DATE: {date_str}", align="R", ln=True)
         self.set_font("Helvetica", "", 9)
         self.set_text_color(100, 100, 100)
         self.set_x(140)
-        self.cell(55, 5, f"REF: HGAI-{datetime.now().strftime('%Y%m%d')}-01", align="R", ln=True)
+        
+        ref_id = self.metadata.get("report_id", "LATEST")[:8].upper()
+        self.cell(55, 5, f"REF: HGAI-{date_str.replace(' ', '')}-{ref_id}", align="R", ln=True)
 
         # Gradient separator line
         self.set_draw_color(*self.brand_primary)
@@ -283,6 +298,7 @@ class HealthReportPDF(FPDF):
 async def generate_user_report(
     email: str,
     request: Request,
+    report_id: str = None,
     current_user: SQLUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -316,33 +332,55 @@ async def generate_user_report(
         except:
             pass
 
-    # 2. Fetch Latest Report from History
-    # Note: mongo_memory.get_full_history_for_dashboard returns messages in chronological order (Oldest -> Newest).
-    full_history = mongo_memory.get_full_history_for_dashboard(str(current_user.id), limit=50)
-    
+    # 2. Fetch Report (Specific or Latest)
     raw_report = None
-    if full_history:
-        # Search from Newest to Oldest to find the most recent report
-        for msg in reversed(full_history):
-            if msg.get("role") == "assistant":
-                try:
-                    content = msg.get("content", "")
-                    parsed = json.loads(content)
-                    # Heuristic to check if it's a report
-                    is_report = (
-                        parsed.get("type") in ["health_report", "medical_report_analysis"] or
-                        parsed.get("input_type") in ["medical_image", "medical_report"] or
-                        "health_information" in parsed or
-                        "test_analysis" in parsed or
-                        "observations" in parsed or
-                        "risk_assessment" in parsed or
-                        "summary" in parsed
-                    )
-                    if is_report:
-                        raw_report = parsed
-                        break
-                except:
-                    continue
+    report_metadata = {}
+    if report_id:
+        # Try to fetch the specific report by ID
+        # We need the full doc to get metadata like created_at
+        report_doc = mongo_memory.memory_collection.find_one({
+            "user_id": str(current_user.id),
+            "report_id": report_id
+        })
+        if report_doc:
+            try:
+                raw_report = json.loads(report_doc["content"])
+                report_metadata = {
+                    "created_at": report_doc.get("timestamp"),
+                    "report_type": report_doc.get("report_type"),
+                    "report_id": report_id
+                }
+            except:
+                pass
+        
+        if not raw_report:
+            print(f"⚠️ Report ID {report_id} not found. Falling back to latest.")
+
+    if not raw_report:
+        # Fetch Latest Report from History as fallback
+        full_history = mongo_memory.get_full_history_for_dashboard(str(current_user.id), limit=50)
+        
+        if full_history:
+            # Search from Newest to Oldest to find the most recent report
+            for msg in reversed(full_history):
+                if msg.get("role") == "assistant":
+                    try:
+                        content = msg.get("content", "")
+                        parsed = json.loads(content)
+                        # Heuristic to check if it's a report (Strict Eligibility)
+                        report_type_field = parsed.get("type") or parsed.get("input_type")
+                        is_report = report_type_field in ["health_report", "medical_report_analysis", "medical_image"]
+                        
+                        if is_report:
+                            raw_report = parsed
+                            report_metadata = {
+                                "created_at": msg.get("timestamp"),
+                                "report_type": msg.get("report_type"),
+                                "report_id": msg.get("report_id")
+                            }
+                            break
+                    except:
+                        continue
     
     if not raw_report:
         raw_report = {"summary": "No report found."}
@@ -351,7 +389,7 @@ async def generate_user_report(
     report = normalize_report_data(raw_report)
 
     # 4. Generate PDF
-    pdf = HealthReportPDF()
+    pdf = HealthReportPDF(metadata=report_metadata)
     pdf.add_page()
     
     await audit_logger.log_event(
@@ -487,7 +525,20 @@ async def generate_user_report(
             
         pdf_buffer = BytesIO(pdf_content)
         
-        filename = f"HealthReport_{email}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        # Determine filename based on metadata
+        report_date = report_metadata.get("created_at")
+        if report_date:
+            if isinstance(report_date, str):
+                try:
+                    report_date = datetime.fromisoformat(report_date.replace('Z', '+00:00'))
+                except:
+                    report_date = datetime.now()
+            date_str = report_date.strftime('%Y%m%d')
+        else:
+            date_str = datetime.now().strftime('%Y%m%d')
+            
+        report_type = report_metadata.get("report_type", "health").lower()
+        filename = f"HealthReport_{report_type}_{date_str}.pdf"
         
         return StreamingResponse(
             pdf_buffer,

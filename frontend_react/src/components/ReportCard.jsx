@@ -116,9 +116,11 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
     } else {
       report = content;
     }
-    // Carry over feedback_rating from the message object
-    if (initialData.feedback_rating && typeof report === 'object') {
-      report.feedback_rating = initialData.feedback_rating;
+    // Carry over metadata from the message object
+    if (typeof report === 'object' && report !== null) {
+      if (initialData.feedback_rating) report.feedback_rating = initialData.feedback_rating;
+      if (initialData.patient_name) report.patient_name = initialData.patient_name;
+      if (initialData.isLatest) report.isLatest = initialData.isLatest;
     }
   } else if (typeof initialData === 'string') {
     try {
@@ -250,6 +252,11 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-navy-900 tracking-tight leading-none mb-1">Health Assessment</h3>
+                {report?.patient_name && (
+                  <div className="text-[10px] font-bold text-brand-600 uppercase tracking-widest mb-1">
+                    Name: {report.patient_name}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <SeverityBadge level={report.severity || "MODERATE"} />
                   <span className="w-1 h-1 rounded-full bg-navy-200" />
@@ -382,6 +389,11 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-navy-900 tracking-tight leading-none mb-1">Lab Analysis</h3>
+                {report?.patient_name && (
+                  <div className="text-[10px] font-bold text-brand-600 uppercase tracking-widest mb-1">
+                    Name: {report.patient_name}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <SeverityBadge level={report.severity || "LOW"} />
                   <span className="w-1 h-1 rounded-full bg-navy-200" />
@@ -404,7 +416,19 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           </div>
           
           <div className="space-y-3">
-            <p className="text-navy-700 text-sm leading-relaxed font-semibold">{report.summary}</p>
+            <div className="relative">
+              <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
+              <p className="text-navy-700 text-sm leading-relaxed font-semibold">{report.summary}</p>
+            </div>
+            
+            {report.health_information && (
+              <div className="relative mt-3 pt-3 border-t border-navy-50/50">
+                <div className="absolute -left-3 top-3 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
+                <div className="text-navy-800 text-[11px] leading-relaxed font-semibold italic prose prose-sm prose-navy max-w-none">
+                  <ReactMarkdown>{report.health_information}</ReactMarkdown>
+                </div>
+              </div>
+            )}
             
             {report.summary?.includes("seek medical attention") && (
               <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3 animate-pulse-soft shadow-sm shadow-rose-500/10">
@@ -553,6 +577,11 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-navy-900 tracking-tight leading-none">{report.report_type || "Lab Analysis"}</h3>
+                {report?.patient_name && (
+                  <div className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mt-1">
+                    Name: {report.patient_name}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mt-1">
                     <span className="px-2 py-0.5 bg-teal-50 text-teal-700 text-[8px] font-bold uppercase rounded-md border border-teal-100">Legacy</span>
                 </div>
@@ -708,6 +737,11 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-navy-900 tracking-tight leading-none mb-1.5">Review Required</h3>
+                {report?.patient_name && (
+                  <div className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-1">
+                    Name: {report.patient_name}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-orange-50 text-orange-700 text-[8px] font-black uppercase rounded-md border border-orange-100 tracking-widest">Safety Escalation</span>
                   <span className="w-1 h-1 rounded-full bg-navy-200" />
@@ -777,6 +811,11 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-navy-900 tracking-tight leading-none mb-1.5">Visual Assessment</h3>
+                {report?.patient_name && (
+                  <div className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-1.5">
+                    Name: {report.patient_name}
+                  </div>
+                )}
                 <div className="flex items-center gap-2.5">
                   <SeverityBadge level={report.severity || "MODERATE"} />
                   <span className="w-1 h-1 rounded-full bg-navy-200" />
@@ -798,13 +837,33 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
             </button>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-4">
             {report.observations?.map((obs, i) => (
               <span key={i} className="px-3 py-1.5 bg-white text-teal-800 text-[10px] font-bold rounded-lg border border-teal-100 shadow-sm hover:border-teal-300 hover:shadow-md transition-all cursor-default flex items-center gap-2">
                 <div className="w-1 h-1 rounded-full bg-teal-400" />
                 {obs}
               </span>
             ))}
+          </div>
+
+          <div className="space-y-3">
+            <div className="relative">
+              <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-teal-500 rounded-full opacity-50" />
+              <p className="text-navy-800 text-[11px] leading-relaxed font-semibold italic">"{report.health_information || report.summary}"</p>
+            </div>
+            {report.confidence_level && (
+              <div className="flex items-center gap-2">
+                <span className="text-[8px] font-bold text-navy-400 uppercase tracking-widest">AI Confidence</span>
+                <span className={clsx(
+                  "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
+                  report.confidence_level.toLowerCase().includes('high') ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                  report.confidence_level.toLowerCase().includes('medium') ? "bg-amber-50 text-amber-700 border-amber-100" :
+                  "bg-orange-50 text-orange-700 border-orange-100"
+                )}>
+                  {report.confidence_level}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -957,6 +1016,16 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
             <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
             <p className="text-navy-800 text-xs leading-relaxed font-semibold italic">"{reportSummary}"</p>
           </div>
+          
+          {report.health_information && reportSummary !== report.health_information && (
+            <div className="relative mt-3 pt-3 border-t border-navy-50/50">
+              <div className="absolute -left-3 top-3 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
+              <div className="text-navy-800 text-[11px] leading-relaxed font-semibold italic prose prose-sm prose-navy max-w-none">
+                <ReactMarkdown>{report.health_information}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+          
           {confidence > 0 && <ConfidenceBar score={confidence} reason={uncertainty} />}
         </div>
       </div>

@@ -168,10 +168,7 @@ const Chat = () => {
                   ) : (
                     <div className="w-full max-w-[95%]">
                       <ReportCard 
-                        data={typeof msg.content === 'string' && msg.content.startsWith('{') 
-                          ? JSON.stringify({ ...JSON.parse(msg.content), isLatest: idx === history.length - 1 })
-                          : msg.content
-                        } 
+                        data={msg} 
                         audioUrl={msg.audio_url} 
                         reportId={msg.report_id} 
                       />

@@ -17,11 +17,13 @@ import re
 
 class QueryIntent(Enum):
     """Primary query intent types with strict priority ordering"""
-    SYMPTOM_QUERY = 1          # Highest priority
-    DRUG_INTERACTION_QUERY = 2
-    TEST_OR_REPORT_QUERY = 3
-    DISEASE_QUERY = 4
-    RESEARCH_QUERY = 5         # Lowest priority
+    EMERGENCY_QUERY = 0         # Critical: Bypasses AI, immediate redirect
+    SMALL_TALK = 1             # Greetings, farewells, gratitude
+    DISEASE_QUERY = 2          # Highest priority for specific questions
+    SYMPTOM_QUERY = 3
+    DRUG_INTERACTION_QUERY = 4
+    TEST_OR_REPORT_QUERY = 5
+    RESEARCH_QUERY = 6         # Lowest priority
     UNKNOWN = 99
 
 
@@ -33,6 +35,7 @@ class DatasetType(Enum):
     ICD11 = "icd11"                        # Disease taxonomy
     DRUG_INTERACTIONS = "drug_interactions" # Safety data
     PUBMED = "pubmed"                      # Research abstracts
+    LAB_REFERENCE = "lab_reference"        # Expert lab markers
 
 
 class RAGRouter:
@@ -68,27 +71,39 @@ class RAGRouter:
     
     # Disease query patterns
     DISEASE_PATTERNS = [
-        r"what is (\w+)",
-        r"tell me about (\w+)",
-        r"explain (\w+)",
-        r"(\w+) disease",
-        r"(\w+) condition",
-        r"symptoms of (\w+)",
-        r"symptoms for (\w+)",
-        r"signs of (\w+)",
-        r"causes of (\w+)"
+        r"what is ([\w\s]+)",
+        r"tell me about ([\w\s]+)",
+        r"explain ([\w\s]+)",
+        r"([\w\s]+) disease",
+        r"([\w\s]+) condition",
+        r"symptoms of ([\w\s]+)",
+        r"symptoms for ([\w\s]+)",
+        r"signs of ([\w\s]+)",
+        r"causes of ([\w\s]+)",
+        r"prevention of ([\w\s]+)",
+        r"how to prevent ([\w\s]+)",
+        r"prevention and symptoms of ([\w\s]+)",
+        r"dengue",
+        r"malaria",
+        r"covid",
+        r"diabetes",
+        r"cancer",
+        r"typhoid",
+        r"rheumatic"
     ]
     
     # Drug interaction patterns
     DRUG_PATTERNS = [
-        r"\w+\s+and\s+\w+",  # "warfarin and aspirin"
-        r"\w+\s+with\s+\w+",  # "ibuprofen with metformin"
         r"interaction",
         r"drug interaction",
         r"medication interaction",
-        r"can i take",
-        r"taking.*with",
-        r"combine.*medication"
+        r"can i take ([\w\s]+) with ([\w\s]+)",
+        r"is it safe to take ([\w\s]+) with ([\w\s]+)",
+        r"taking ([\w\s]+) (with|and) ([\w\s]+)",
+        r"combine ([\w\s]+) and ([\w\s]+)",
+        r"safe to take ([\w\s]+) and ([\w\s]+)",
+        r"interaction between ([\w\s]+) and ([\w\s]+)",
+        r"([\w\s]+) with ([\w\s]+) safe"
     ]
     
     # Test/report patterns
@@ -100,7 +115,21 @@ class RAGRouter:
         r"cholesterol",
         r"test results",
         r"report",
-        r"lab report"
+        r"lab report",
+        r"hba1c",
+        r"glucose",
+        r"fasting",
+        r"platelets",
+        r"tsh",
+        r"t3",
+        r"t4",
+        r"creatinine",
+        r"cbc",
+        r"biopsy",
+        r"mri",
+        r"ct scan",
+        r"x-ray",
+        r"ultrasound"
     ]
     
     # Research patterns
@@ -110,9 +139,39 @@ class RAGRouter:
         r"studies",
         r"clinical trial",
         r"evidence",
-        r"what does research say"
+        r"what does research say",
+        r"pubmed",
+        r"papers on",
+        r"journal"
     ]
     
+    # Small talk patterns
+    GREETINGS = ["hi", "hello", "hey", "good morning", "good evening", "good afternoon", "hi there", "hello there"]
+    FAREWELLS = ["bye", "goodbye", "see you", "talk later", "farewell"]
+    GRATITUDE = ["thanks", "thank you", "thx", "much appreciated"]
+    CASUAL_REPLIES = ["ok", "fine", "cool", "nice", "got it", "alright"]
+    
+    # Emergency keywords (Deterministic Safety Intercept)
+    EMERGENCY_KEYWORDS = {
+        "chest pain", "heart attack", "stroke", "cannot breathe", "shortness of breath",
+        "suicide", "kill myself", "unconscious", "heavy bleeding", "seizure",
+        "poisoning", "overdose", "choking", "anaphylaxis", "severe allergic reaction"
+    }
+
+    # Query augmentation rules
+    AUGMENTATION_RULES = {
+        "platelet": "platelets thrombocytopenia normal range",
+        "hba1c": "hba1c diabetes blood sugar monitoring",
+        "creatinine": "creatinine kidney function kft egfr",
+        "tsh": "tsh thyroid function hypothyroidism hyperthyroidism",
+        "hemoglobin": "hemoglobin anemia iron level",
+        "alt": "alt sgpt liver function lft",
+        "ldl": "ldl cholesterol lipid profile heart health",
+        "vitamin d": "vitamin d deficiency bone health",
+        "wbc": "wbc white blood cells infection",
+        "crp": "crp inflammation marker infection"
+    }
+
     def __init__(self):
         """Initialize RAG router with configuration"""
         self.max_follow_ups = 1  # Enterprise standard: max 1 follow-up
@@ -122,7 +181,7 @@ class RAGRouter:
         """
         Detect primary intent from user query with strict priority ordering.
         
-        Priority: SYMPTOM > DRUG > TEST > DISEASE > RESEARCH
+        Priority: EMERGENCY > DRUG > RESEARCH > TEST > DISEASE > SYMPTOM
         
         Args:
             query: User's query text
@@ -133,30 +192,59 @@ class RAGRouter:
         """
         query_lower = query.lower()
         
-        # Priority 1: SYMPTOM_QUERY
-        # Check for symptom keywords or "I have/feel" patterns
+        # Priority 0: EMERGENCY_QUERY (Immediate Safety Intercept)
+        if any(keyword in query_lower for keyword in self.EMERGENCY_KEYWORDS):
+            return QueryIntent.EMERGENCY_QUERY
+
+        # Priority 1: SMALL_TALK (Greetings, etc.)
+        if self._is_small_talk(query_lower):
+            return QueryIntent.SMALL_TALK
+
+        # Priority 2: DRUG_INTERACTION_QUERY (Safety critical, highly specific)
+        if self._is_drug_query(query_lower):
+            return QueryIntent.DRUG_INTERACTION_QUERY
+
+        # Priority 2: RESEARCH_QUERY (Specific scholarly intent)
+        if self._is_research_query(query_lower):
+            return QueryIntent.RESEARCH_QUERY
+
+        # Priority 3: TEST_OR_REPORT_QUERY (Specific lab markers/results)
+        if self._is_test_query(query_lower):
+            return QueryIntent.TEST_OR_REPORT_QUERY
+
+        # Priority 4: DISEASE_QUERY (General condition information)
+        if self._is_disease_query(query_lower):
+            return QueryIntent.DISEASE_QUERY
+            
+        # Priority 5: SYMPTOM_QUERY (General symptom reports)
         if self._is_symptom_query(query_lower):
             return QueryIntent.SYMPTOM_QUERY
         
-        # Priority 2: DRUG_INTERACTION_QUERY
-        if self._is_drug_query(query_lower):
-            return QueryIntent.DRUG_INTERACTION_QUERY
-        
-        # Priority 3: TEST_OR_REPORT_QUERY
-        if self._is_test_query(query_lower):
-            return QueryIntent.TEST_OR_REPORT_QUERY
-        
-        # Priority 4: DISEASE_QUERY
-        if self._is_disease_query(query_lower):
-            return QueryIntent.DISEASE_QUERY
-        
-        # Priority 5: RESEARCH_QUERY
-        if self._is_research_query(query_lower):
-            return QueryIntent.RESEARCH_QUERY
-        
-        # Default: UNKNOWN (will use general routing)
+        # Default: UNKNOWN
         return QueryIntent.UNKNOWN
     
+    def _is_small_talk(self, query_lower: str) -> bool:
+        """Check if query is small talk (greetings, farewells, etc.)"""
+        # Clean query: remove punctuation and extra whitespace
+        clean_query = re.sub(r'[^\w\s]', '', query_lower).strip()
+        
+        # Check for single word or short phrase matches
+        all_small_talk = self.GREETINGS + self.FAREWELLS + self.GRATITUDE + self.CASUAL_REPLIES
+        
+        # 1. Exact match for short queries
+        if clean_query in all_small_talk:
+            return True
+            
+        # 2. Check if the query starts with a greeting (e.g., "Hi, I have a headache" should NOT be small talk)
+        # But "Hi there" should be.
+        # So we only count it as small talk if the REMAINING part is also small talk or empty.
+        words = clean_query.split()
+        if len(words) <= 2:
+            if all(word in all_small_talk for word in words):
+                return True
+                
+        return False
+
     def _is_symptom_query(self, query_lower: str) -> bool:
         """Check if query is about symptoms"""
         # Check for direct symptom mentions
@@ -213,9 +301,10 @@ class RAGRouter:
         Determine if query should bypass RAG and use symptom fallback directly.
         
         Criteria:
-        1. Intent is SYMPTOM_QUERY
-        2. Symptom is common (in COMMON_SYMPTOMS)
-        3. NOT asking about disease symptoms (e.g., "symptoms of diabetes")
+        1. NOT a disease-specific query (e.g., "dengue fever") - override everything else
+        2. Intent is SYMPTOM_QUERY
+        3. Symptom is common (in COMMON_SYMPTOMS)
+        4. NOT asking about disease symptoms (e.g., "symptoms of diabetes")
         
         Args:
             query: User's query text
@@ -224,15 +313,19 @@ class RAGRouter:
         Returns:
             True if should use shortcut, False otherwise
         """
-        if intent != QueryIntent.SYMPTOM_QUERY:
-            return False
-        
         query_lower = query.lower()
         
+        # Check if it's actually a disease query (higher specificity) - override shortcut
+        if self._is_disease_query(query_lower):
+            return False
+
+        if intent != QueryIntent.SYMPTOM_QUERY:
+            return False
+
         # Check if asking about disease symptoms (should NOT use shortcut)
         disease_symptom_patterns = [
             "symptoms of", "symptoms for", "what are the symptoms",
-            "signs of", "signs and symptoms"
+            "signs of", "signs and symptoms", "prevention"
         ]
         
         if any(pattern in query_lower for pattern in disease_symptom_patterns):
@@ -245,6 +338,34 @@ class RAGRouter:
         
         return False
     
+    def extract_test_key(self, query: str) -> Optional[str]:
+        """
+        Deterministic extraction of testKey from query.
+        Matches against common lab markers and aliases.
+        """
+        query_lower = query.lower()
+        
+        # This list should ideally be synced with lab_reference_dataset.json
+        test_keys = [
+            "hemoglobin", "rbc_count", "hematocrit", "wbc", "neutrophils", 
+            "lymphocytes", "monocytes", "eosinophils", "basophils", "platelets",
+            "mcv", "mch", "mchc", "rdw", "esr", "fasting_glucose", "random_glucose",
+            "postprandial_glucose", "hba1c", "insulin_level", "c_peptide",
+            "tsh", "free_t4", "free_t3", "total_t4", "total_t3", "anti_tpo",
+            "creatinine", "urea", "bun", "egfr", "sodium", "potassium", "chloride",
+            "uric_acid", "alt_sgpt", "ast_sgot", "alp", "total_bilirubin",
+            "direct_bilirubin", "albumin", "total_protein", "ggt", "total_cholesterol",
+            "ldl", "hdl", "triglycerides", "vldl", "non_hdl_cholesterol",
+            "vitamin_d", "vitamin_b12", "ferritin", "calcium", "magnesium", "iron",
+            "crp", "procalcitonin", "dengue_ns1", "dengue_igm", "malaria_antigen"
+        ]
+        
+        for key in test_keys:
+            if key.replace("_", " ") in query_lower or key in query_lower:
+                return key
+                
+        return None
+
     def get_dataset_routing(self, intent: QueryIntent) -> List[DatasetType]:
         """
         Get ordered list of datasets to query based on intent.
@@ -267,8 +388,9 @@ class RAGRouter:
                 DatasetType.DRUG_INTERACTIONS   # Only drug interaction data
             ],
             QueryIntent.TEST_OR_REPORT_QUERY: [
-                DatasetType.MEDLINEPLUS,        # Primary
-                DatasetType.WHO_NHS             # Secondary
+                DatasetType.LAB_REFERENCE,      # Primary expert knowledge
+                DatasetType.MEDLINEPLUS,        # Secondary
+                DatasetType.WHO_NHS             # Tertiary
             ],
             QueryIntent.DISEASE_QUERY: [
                 DatasetType.MEDLINEPLUS,        # Primary (patient education)
@@ -290,14 +412,16 @@ class RAGRouter:
     def augment_query(self, query: str, intent: QueryIntent) -> str:
         """
         Augment query with keywords to improve retrieval based on intent.
-        
-        Args:
-            query: Original user query
-            intent: Detected intent
-            
-        Returns:
-            Augmented query string
+        Includes specific rules for lab reference data.
         """
+        query_lower = query.lower()
+        
+        # Apply specific lab augmentation rules
+        for trigger, addition in self.AUGMENTATION_RULES.items():
+            if trigger in query_lower:
+                query = f"{query} {addition}"
+                break
+
         augmentation_map = {
             QueryIntent.SYMPTOM_QUERY: "symptom causes treatment management",
             QueryIntent.DRUG_INTERACTION_QUERY: "drug interaction safety warning",
@@ -313,6 +437,17 @@ class RAGRouter:
         
         return query
     
+    def get_min_score(self, intent: QueryIntent) -> float:
+        """Get strict similarity threshold based on query intent."""
+        thresholds = {
+            QueryIntent.SYMPTOM_QUERY: 0.35,
+            QueryIntent.RESEARCH_QUERY: 0.45,
+            QueryIntent.DRUG_INTERACTION_QUERY: 0.5,
+            QueryIntent.DISEASE_QUERY: 0.35,
+            QueryIntent.TEST_OR_REPORT_QUERY: 0.4
+        }
+        return thresholds.get(intent, 0.3)
+
     def validate_retrieval_quality(
         self, 
         results: List[Dict], 
@@ -331,7 +466,7 @@ class RAGRouter:
             Tuple of (is_valid, reason)
         """
         if min_score is None:
-            min_score = self.min_similarity_score
+            min_score = self.get_min_score(intent)
         
         # Check 1: Do we have any results?
         if not results or len(results) == 0:

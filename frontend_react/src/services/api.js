@@ -68,8 +68,12 @@ export const authService = {
     const response = await api.post('/auth/login', formData);
     return response.data;
   },
-  signup: async (email, password) => {
-    const response = await api.post('/auth/signup', { email, password });
+  signup: async (email, password, patientName) => {
+    const response = await api.post('/auth/signup', { 
+      email, 
+      password, 
+      patient_name: patientName 
+    });
     return response.data;
   },
   logout: () => {

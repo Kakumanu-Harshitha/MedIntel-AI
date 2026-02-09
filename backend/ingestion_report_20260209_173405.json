@@ -1,0 +1,19 @@
+{
+    "timestamp": "2026-02-09T17:34:05.420429",
+    "summary": {
+        "total_pages_attempted": 633,
+        "total_pages_ingested": 260,
+        "total_chunks_processed": 2567,
+        "total_chunks_inserted": 2469
+    },
+    "deduplication": {
+        "url_skipped": 9,
+        "hash_skipped": 68,
+        "similarity_skipped": 30
+    },
+    "dataset_breakdown": {
+        "medlineplus": 153,
+        "nhs": 83,
+        "who": 24
+    }
+}

@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_, or_, String
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
-from database import get_db
-from models import User, UserFeedback, AuditLog, SystemConfig
-from auth import get_current_owner
-from audit_logger import audit_logger
+from .database import get_db
+from .models import User, UserFeedback, AuditLog, SystemConfig
+from .auth import get_current_owner
+from .audit_logger import audit_logger
+from . import mongo_memory
 
 router = APIRouter(prefix="/owner", tags=["Owner Dashboard"])
 
@@ -20,19 +21,19 @@ async def get_health_metrics(db: Session = Depends(get_db), owner: User = Depend
         total_users = db.query(User).count()
         
         # 2. Active Users (Today)
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).date()
         # Using cast for better compatibility with different DBs
         from sqlalchemy import cast, Date
         active_today = db.query(func.count(func.distinct(AuditLog.user_id)))\
             .filter(cast(AuditLog.timestamp, Date) == today).scalar()
             
         # 3. Active Users (Last 7 Days)
-        week_ago = datetime.utcnow() - timedelta(days=7)
+        week_ago = datetime.now(timezone.utc) - timedelta(days=7)
         active_week = db.query(func.count(func.distinct(AuditLog.user_id)))\
             .filter(AuditLog.timestamp >= week_ago).scalar()
             
         # 4. Total Queries (Last 24h)
-        day_ago = datetime.utcnow() - timedelta(days=1)
+        day_ago = datetime.now(timezone.utc) - timedelta(days=1)
         total_queries = db.query(AuditLog).filter(
             AuditLog.timestamp >= day_ago,
             AuditLog.action == "AI_QUERY"
@@ -75,7 +76,24 @@ async def get_health_metrics(db: Session = Depends(get_db), owner: User = Depend
 async def get_satisfaction_metrics(db: Session = Depends(get_db), owner: User = Depends(get_current_owner)):
     """
     Returns user satisfaction insights based on feedback.
+    Prioritizes MongoDB feedback if available, otherwise falls back to SQL.
     """
+    # Try MongoDB first
+    if mongo_memory.feedback_collection is not None:
+        metrics = mongo_memory.get_feedback_metrics()
+        return {
+            "helpfulness_rate": metrics["helpfulness_rate"],
+            "total_feedback": metrics["total_feedback"],
+            "reasons_breakdown": metrics["reasons_breakdown"],
+            "recent_feedback": metrics["recent_feedback"],
+            "avg_confidence": {
+                "helpful": 0,
+                "not_helpful": 0
+            },
+            "source": "mongodb"
+        }
+
+    # Fallback to SQL (Legacy)
     total_feedback = db.query(UserFeedback).count()
     helpful_count = db.query(UserFeedback).filter(UserFeedback.helpful == 1).count()
     helpfulness_rate = (helpful_count / total_feedback * 100) if total_feedback > 0 else 0
@@ -138,7 +156,7 @@ async def get_security_metrics(db: Session = Depends(get_db), owner: User = Depe
     otp_failures = db.query(AuditLog).filter(AuditLog.action.in_(["TOTP_VERIFICATION", "OTP_VERIFY"]), AuditLog.status == "FAILURE").count()
     
     # Suspicious spikes (more than 10 failed logins in the last hour)
-    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
     recent_failed_logins = db.query(AuditLog).filter(
         AuditLog.action.in_(["USER_LOGIN", "LOGIN"]),
         AuditLog.status == "FAILURE",
@@ -211,7 +229,8 @@ async def get_hitl_metrics(db: Session = Depends(get_db), owner: User = Depends(
                 "id": e.id,
                 "timestamp": e.timestamp,
                 "reason": e.metadata_json.get("reason", "Unknown") if e.metadata_json else "Unknown",
-                "user_id": e.user_id
+                "user_id": e.user_id,
+                "metadata": e.metadata_json
             } for e in recent_escalations
         ],
         "reasons_breakdown": reasons_breakdown
@@ -277,7 +296,6 @@ async def update_feature_toggle(
     db.commit()
 
     # Log the action
-    from .audit_logger import audit_logger
     await audit_logger.log_event(
         action="SYSTEM_TOGGLE_UPDATE",
         status="SUCCESS",

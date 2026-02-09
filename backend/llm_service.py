@@ -293,29 +293,31 @@ OR "No relevant memory used"
 """
 
 PROMPT_MEDICAL_RAG = """
-You are a Medical Information Assistant. Your goal is to provide helpful, safe, and direct health information based on the user's query.
+You are a Medical AI Assistant specializing in accurate, evidence-based health information.
 
-INSTRUCTIONS:
-1. Use the provided retrieved medical documents OR fallback symptom data to explain the symptoms or condition.
-2. If no reliable content is available for rare queries, say: "I don't have enough reliable information to answer this clearly." 
-3. Use previous user information ONLY IF confirmed as relevant.
-4. Do NOT diagnose or prescribe. Use cautious language: "may be associated with", "can vary between individuals".
-5. For symptom queries, provide:
-   - Explanation of the symptom
-   - Common causes
-   - Self-care advice
-   - Warning signs for a doctor visit
+TASK:
+1. Provide a detailed, clear explanation for the user's health-related query.
+2. If the user asks about a specific disease (like Dengue, Malaria, Eczema, Hives, etc.), you MUST provide a comprehensive explanation including:
+   - What the condition is (definition).
+   - Common symptoms and how they present.
+   - Typical causes or triggers.
+   - General care, management, and prevention methods.
+3. Use the RETRIEVED MEDICAL KNOWLEDGE provided below to ground your answer. This is your primary source of truth.
+4. If the retrieved knowledge is insufficient for a specific disease, use your internal medical knowledge base to provide a comprehensive answer, but always maintain a helpful and cautious tone.
+5. ALWAYS include a disclaimer that this is not a medical diagnosis.
 
-RESPONSE STRUCTURE (JSON):
+🚨 CRITICAL: You MUST include the "health_information" field in your JSON output. This field should contain the detailed explanation of the condition, symptoms, and prevention as described in Task 2.
+
+OUTPUT FORMAT (JSON):
 {{
   "type": "health_report",
-  "health_information": "Detailed response to the user.",
+  "health_information": "Detailed, comprehensive explanation of the condition, including definition, symptoms, causes, and prevention.",
   "possible_conditions": ["Condition 1", "Condition 2"],
   "reasoning_brief": "Brief reasoning for the analysis.",
-  "recommended_next_steps": "Advice on what to do next.",
+  "recommended_next_steps": "Advice on what to do next (e.g., stay hydrated, see a doctor).",
   "ai_confidence": "Confidence level (Low/Medium/High)",
   "trusted_sources": ["Source 1", "Source 2"],
-  "disclaimer": "This is for informational purposes and not a diagnosis."
+  "disclaimer": "This is for informational purposes and not a diagnosis. Please consult a healthcare professional."
 }}
 
 CURRENT USER QUERY:
@@ -349,7 +351,12 @@ TASK:
 1. Explain what each lab test or marker means in simple terms.
 2. Analyze the user's values against normal ranges.
 3. Provide a summary of the findings.
-4. DO NOT provide a medical diagnosis.
+4. If the report indicates a specific condition, provide a detailed explanation of that condition (definition, symptoms, causes, management).
+5. DO NOT provide a medical diagnosis.
+
+🚨 CRITICAL: You MUST include BOTH the "summary" field AND the "health_information" field in your JSON output. 
+- The "summary" field should contain a concise but thorough overview of the entire report findings.
+- The "health_information" field MUST contain the detailed explanation of any conditions, symptoms, and general medical knowledge relevant to the report.
 
 INPUT DATA:
 - EXTRACTED LAB DATA: {report_text}
@@ -359,7 +366,8 @@ INPUT DATA:
 OUTPUT FORMAT (JSON):
 {{
   "type": "medical_report_analysis",
-  "summary": "General overview of the report.",
+  "summary": "MANDATORY: General overview of the report, including key findings and overall health status.",
+  "health_information": "MANDATORY: Detailed explanation of any identified conditions, symptoms, causes, and general medical care information.",
   "test_analysis": [
     {{
       "test_name": "Name",
@@ -403,7 +411,15 @@ OUTPUT FORMAT (JSON):
 """
 
 PROMPT_RADIOLOGY_SPECIALIST = """
-You are a Radiology Expert. Your task is to analyze the observations from a medical scan (X-ray, MRI, CT, Ultrasound) and provide a clear explanation for the user.
+You are a Radiology Expert. Your task is to analyze the observations from a medical scan (X-ray, MRI, CT, Ultrasound) and provide a clear, detailed explanation for the user.
+
+TASK:
+1. Summarize the visual observations from the scan.
+2. For each possible condition identified, provide a clear, detailed explanation of what it is, common causes, and typical management.
+3. Use the RETRIEVED MEDICAL KNOWLEDGE (RAG) to ground your explanations in evidence.
+4. Maintain a professional yet accessible tone.
+
+🚨 CRITICAL: You MUST include the "summary" field in your JSON output. This field should contain a concise but thorough overview of the findings and explanations.
 
 INPUT DATA:
 - VISION OBSERVATIONS: {image_caption}
@@ -415,6 +431,8 @@ OUTPUT FORMAT (JSON):
 {{
   "input_type": "medical_image",
   "modality": "radiology",
+  "summary": "MANDATORY: A clear, concise summary of the radiology findings and their significance.",
+  "health_information": "Detailed explanation of the possible conditions identified, including definitions and symptoms.",
   "observations": ["List of visual findings"],
   "possible_conditions": ["Conditions associated with these findings"],
   "general_advice": "Recommended next steps",
@@ -424,7 +442,15 @@ OUTPUT FORMAT (JSON):
 """
 
 PROMPT_SKIN_SPECIALIST = """
-You are a Dermatology Expert. Your task is to analyze observations from a skin image (rash, lesion, etc.) and provide a clear explanation for the user.
+You are a Dermatology Expert. Your task is to analyze observations from a skin image (rash, lesion, etc.) and provide a clear, detailed explanation for the user.
+
+TASK:
+1. Summarize the visual observations from the skin image.
+2. For each possible condition identified (e.g., Eczema, Psoriasis, Hives), provide a clear, detailed explanation of what it is, its common characteristics, and general care.
+3. Use the RETRIEVED MEDICAL KNOWLEDGE (RAG) to ground your explanations in evidence.
+4. Maintain a helpful and empathetic tone.
+
+🚨 CRITICAL: You MUST include the "summary" field in your JSON output. This field should contain a concise but thorough overview of the findings and explanations.
 
 INPUT DATA:
 - VISION OBSERVATIONS: {image_caption}
@@ -436,6 +462,8 @@ OUTPUT FORMAT (JSON):
 {{
   "input_type": "medical_image",
   "modality": "dermatology",
+  "summary": "MANDATORY: A clear, concise summary of the dermatological observations and their significance.",
+  "health_information": "Detailed explanation of the possible skin conditions identified, including definitions and characteristics.",
   "observations": ["List of visual findings"],
   "possible_conditions": ["Conditions associated with these findings"],
   "general_advice": "Skin care or next steps",
@@ -445,7 +473,15 @@ OUTPUT FORMAT (JSON):
 """
 
 PROMPT_EYE_SPECIALIST = """
-You are an Ophthalmology Expert. Your task is to analyze observations from an eye image and provide a clear explanation for the user.
+You are an Ophthalmology Expert. Your task is to analyze observations from an eye image and provide a clear, detailed explanation for the user.
+
+TASK:
+1. Summarize the visual observations from the eye image.
+2. For each possible condition identified, provide a clear, detailed explanation of what it is, how it affects vision, and general care.
+3. Use the RETRIEVED MEDICAL KNOWLEDGE (RAG) to ground your explanations in evidence.
+4. Maintain a professional and cautious tone.
+
+🚨 CRITICAL: You MUST include the "summary" field in your JSON output. This field should contain a concise but thorough overview of the findings and explanations.
 
 INPUT DATA:
 - VISION OBSERVATIONS: {image_caption}
@@ -457,6 +493,8 @@ OUTPUT FORMAT (JSON):
 {{
   "input_type": "medical_image",
   "modality": "ophthalmology",
+  "summary": "MANDATORY: A clear, concise summary of the ophthalmological observations and their significance.",
+  "health_information": "Detailed explanation of the possible eye conditions identified, including definitions and impact.",
   "observations": ["List of visual findings"],
   "possible_conditions": ["Conditions associated with these findings"],
   "general_advice": "Eye care or next steps",
@@ -553,9 +591,9 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     # This improves response time and reduces API costs for common queries
     query_lower = combined_input.lower()
     
-    # Skip symptom shortcut if in report analysis mode
-    if is_report_analysis:
-        print("⏭️ Skipping symptom shortcut for report analysis")
+    # Skip symptom shortcut if in report or image analysis mode
+    if is_report_analysis or is_image_analysis:
+        print(f"⏭️ Skipping symptom shortcut for {'report' if is_report_analysis else 'image'} analysis")
         symptom_shortcut = None
     else:
         # Check for direct symptom mentions
@@ -564,7 +602,7 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     # Also check for "symptoms of/for [disease]" pattern - these should NOT use shortcut
     is_disease_symptom_query = any(pattern in query_lower for pattern in [
         "symptoms of", "symptoms for", "what are the symptoms", 
-        "signs of", "signs and symptoms"
+        "signs of", "signs and symptoms", "prevention", "dengue", "malaria"
     ])
     
     # CONVERSATION MEMORY: Check if we already discussed this symptom recently
@@ -660,6 +698,48 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     
     print(f"🎯 RAG Router detected intent: {intent_enum.name} -> {detected_intent}")
     
+    # --- EMERGENCY INTERCEPT (Safety Layer 0) ---
+    if intent_enum == QueryIntent.EMERGENCY_QUERY:
+        print(f"🚨 EMERGENCY DETECTED: {combined_input[:50]}...")
+        await audit_logger.log_event(
+            action="AI_QUERY",
+            status="SUCCESS",
+            user_id=user_id,
+            request=request,
+            metadata={"type": "emergency_intercept", "query": combined_input[:50]}
+        )
+        return json.dumps({
+            "type": "health_report",
+            "health_information": "⚠️ **URGENT: EMERGENCY DETECTED**\n\nBased on your input, you may be experiencing a medical emergency. Please **stop using this app immediately** and take the following actions:\n\n1. **Call emergency services (e.g., 911, 112, or your local equivalent) right away.**\n2. Do not attempt to drive yourself to the hospital.\n3. If you are alone, try to alert a neighbor or someone nearby.",
+            "possible_conditions": ["CRITICAL: Requires Immediate Medical Attention"],
+            "reasoning_brief": "Deterministic safety layer identified keywords associated with life-threatening conditions.",
+            "recommended_next_steps": "Contact emergency services immediately. Do not wait for further AI analysis.",
+            "ai_confidence": "N/A - Deterministic Safety Override",
+            "trusted_sources": ["Emergency Protocol"],
+            "disclaimer": "This is a life-safety override. Seek professional medical help immediately."
+        })
+
+    # --- SMALL TALK INTERCEPT ---
+    if intent_enum == QueryIntent.SMALL_TALK:
+        print(f"💬 SMALL_TALK DETECTED: {combined_input[:50]}...")
+        # Determine specific greeting/farewell/gratitude for a more natural response
+        query_lower = combined_input.lower()
+        message = "Hi! 👋 How can I help you today?"
+        
+        if any(g in query_lower for g in rag_router.GREETINGS):
+            message = "Hi! 👋 How can I help you today?"
+        elif any(f in query_lower for f in rag_router.FAREWELLS):
+            message = "Goodbye! 👋 Take care and stay healthy!"
+        elif any(g in query_lower for g in rag_router.GRATITUDE):
+            message = "You're very welcome! 😊 Let me know if you have any other health questions."
+        elif any(c in query_lower for c in rag_router.CASUAL_REPLIES):
+            message = "Got it! 👍 Let me know if you need any medical assistance or report analysis."
+            
+        return json.dumps({
+            "type": "chat_message",
+            "message": message
+        })
+
     # Also run LLM controller for clarification decision (but use router intent)
     if is_report_analysis:
         # Skip controller for report analysis - go straight to retrieval
@@ -744,8 +824,20 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
         if "Relevant memory included" in confirmed_context:
             search_query += " " + confirmed_context
             
+        # Determine if we should use a specific namespace and filter
+        namespace = None
+        filter_dict = None
+        if intent_enum == QueryIntent.TEST_OR_REPORT_QUERY:
+            namespace = "lab_reference"
+            extracted_key = rag_router.extract_test_key(combined_input)
+            if extracted_key:
+                filter_dict = {"testKey": extracted_key}
+                print(f"🧪 Deterministic match: {extracted_key}. Using metadata filter.")
+            else:
+                print(f"🧪 No deterministic match. Using semantic search in namespace: {namespace}")
+
         # Retrieve with higher top_k, then filter by allowed datasets
-        docs = rag_service.search(search_query, top_k=12)
+        docs = rag_service.search(search_query, top_k=12, namespace=namespace, filter=filter_dict)
         
         # Filter results based on intent-specific dataset routing
         allowed_datasets = rag_router.get_dataset_routing(intent_enum)
@@ -933,6 +1025,16 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
             response_format={"type": "json_object"},
             use_primary=True # Use big model for final analysis, fallback if needed
         )
+
+        # DEBUG: Log final LLM response structure
+        try:
+            debug_parsed = json.loads(final_response_content)
+            print(f"DEBUG: LLM Response Keys: {list(debug_parsed.keys())}")
+            if is_report_analysis and "summary" not in debug_parsed:
+                print("⚠️ WARNING: Report analysis missing 'summary' field!")
+        except Exception as debug_e:
+            print(f"DEBUG: Failed to parse LLM response for debug logging: {debug_e}")
+
         # --- STEP 8: Feedback Refinement (Handled by feedback_router.py) ---
         await audit_logger.log_event(
             action="AI_QUERY",

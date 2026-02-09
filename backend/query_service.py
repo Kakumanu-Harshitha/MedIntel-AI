@@ -161,6 +161,21 @@ async def handle_multimodal_query(
         report_file.file.seek(0)
         file_bytes = await report_file.read()
         report_data = report_processor.process_report(file_bytes, report_file.filename)
+        
+        if report_data["type"] == "error":
+            # If there's an error processing the report, we should let the user know directly
+            # rather than letting the LLM try to interpret the error message.
+            return {
+                "text_response": json.dumps({
+                    "summary": "Report Analysis Failed",
+                    "severity": "UNKNOWN",
+                    "analysis": report_data["content"],
+                    "recommendations": ["Please upload a clearer image or the original PDF file."],
+                    "disclaimer": "Medical Report Parsing Error"
+                }),
+                "report_id": None
+            }
+            
         report_text = report_data["content"]
         print(f"📄 Report processing complete: {len(report_text)} chars extracted.")
         
@@ -257,14 +272,35 @@ async def handle_multimodal_query(
     # Use full JSON response for dashboard consistency (styling)
     # The mongo_memory.get_user_memory will clean it for LLM context
     mongo_memory.store_message(user_id_str, "user", final_prompt)
-    mongo_memory.store_message(user_id_str, "assistant", text_response)
+    
+    # Extract report type for metadata storage
+    report_type = "general"
+    is_force_report = bool(report_file or image_file) # If file was uploaded, it's a report
+    
+    try:
+        resp_parsed = json.loads(text_response)
+        report_type = resp_parsed.get("type") or resp_parsed.get("input_type") or "general"
+        
+        # DEBUG: Verify if report detection logic in mongo_memory will pick this up
+        print(f"DEBUG: Storing assistant message. Keys: {list(resp_parsed.keys())}, ForceReport: {is_force_report}")
+    except:
+        pass
+        
+    report_id = mongo_memory.store_message(
+        user_id_str, 
+        "assistant", 
+        text_response,
+        report_type=report_type,
+        force_report=is_force_report
+    )
 
     # 9. Return all relevant data to the frontend
     return {
         "text_response": text_response,
         "transcribed_text": transcribed_text,
         "image_caption": image_caption,
-        "audio_url": audio_url
+        "audio_url": audio_url,
+        "report_id": report_id
     }
 
 

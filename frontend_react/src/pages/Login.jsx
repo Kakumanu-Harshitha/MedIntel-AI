@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
-import { Activity, ArrowRight, Loader2, Mail, CheckCircle, Lock, ShieldCheck, HeartPulse } from 'lucide-react';
+import { Activity, ArrowRight, Loader2, Mail, CheckCircle, Lock, ShieldCheck, HeartPulse, User } from 'lucide-react';
 
 const Login = () => {
   const [view, setView] = useState('login'); // 'login', 'signup', 'forgot'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [patientName, setPatientName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -27,7 +28,7 @@ const Login = () => {
         localStorage.setItem('role', data.role);
         navigate(data.role === 'OWNER' ? '/owner' : '/chat');
       } else if (view === 'signup') {
-        const data = await authService.signup(email, password);
+        const data = await authService.signup(email, password, patientName);
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('refreshToken', data.refresh_token);
         localStorage.setItem('email', data.email);
@@ -130,7 +131,24 @@ const Login = () => {
                   {successMessage}
                 </div>
               )}
-              
+
+              {view === 'signup' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-navy-700 ml-1">Name</label>
+                  <div className="relative group">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-navy-400 group-focus-within:text-brand-600 transition-colors" />
+                    <input
+                      type="text"
+                      required
+                      className="w-full pl-12 pr-4 py-3.5 bg-navy-50/50 border border-navy-100 rounded-xl focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 focus:bg-white transition-all outline-none text-navy-900 placeholder:text-navy-300"
+                      value={patientName}
+                      onChange={(e) => setPatientName(e.target.value)}
+                      placeholder="Enter name"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-navy-700 ml-1">Email Address</label>
                 <div className="relative group">

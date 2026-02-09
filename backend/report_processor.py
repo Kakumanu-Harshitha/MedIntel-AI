@@ -7,6 +7,8 @@ import fitz  # PyMuPDF
 from PIL import Image
 from typing import Optional, List, Dict
 
+from .lab_parser import lab_parser
+
 class ReportProcessor:
     def __init__(self):
         # Initialize the OCR reader once to avoid overhead
@@ -87,93 +89,62 @@ class ReportProcessor:
         Contains digits AND at least one medical keyword or unit.
         """
         if not text or len(text.strip()) < 10:
+            print(f"⚠️ Validation failed: Text too short ({len(text.strip()) if text else 0} chars)")
             return False
             
         # Comprehensive list of medical keywords and units
         medical_identifiers = [
-            'hb', 'hemoglobin', 'wbc', 'rbc', 'glucose', 'cholesterol', 'sugar',
-            'platelet', 'count', 'range', 'result', 'value', 'cbc', 'lipid',
-            'g/dl', 'mg/dl', 'mmol/l', '%', 'cells/ul', 'units/l', 'fl', 'pg',
-            'microgram', 'vitamin', 'thyroid', 'tsh', 'creatinine', 'urea'
-        ]
+                'hb', 'hemoglobin', 'hgb', 'wbc', 'rbc', 'glucose', 'cholesterol', 'sugar',
+                'platelet', 'count', 'range', 'result', 'value', 'cbc', 'lipid',
+                'g/dl', 'mg/dl', 'mmol/l', '%', 'cells/ul', 'units/l', 'fl', 'pg',
+                'microgram', 'vitamin', 'thyroid', 'tsh', 'creatinine', 'urea',
+                'neutrophils', 'lymphocytes', 'monocytes', 'eosinophils', 'basophils',
+                'hct', 'pcv', 'mcv', 'mch', 'mchc', 'rdw', 'mpv',
+                'bilirubin', 'protein', 'albumin', 'globulin', 'hba1c', 
+                'thyroxine', 'triiodothyronine', 't3', 't4', 'alt', 'ast', 'sgpt', 'sgot',
+                'alp', 'bun', 'uric acid', 'calcium', 'iron', 'tibc',
+                'report', 'patient', 'reference', 'biological', 'interval', 'observed', 'method',
+                'specimen', 'collected', 'received', 'reported', 'clinical', 'pathology', 'diagnostic',
+                'test', 'result', 'value', 'analysis', 'lab', 'laboratory', 'hospital', 'doctor', 'physician',
+                'name', 'age', 'sex', 'gender', 'date'
+            ]
         
         text_lower = text.lower()
         has_identifier = any(ident in text_lower for ident in medical_identifiers)
         has_digits = bool(re.search(r'\d+', text))
         
+        if not has_identifier or not has_digits:
+            reason = ""
+            if not has_identifier: reason += "No medical identifiers. "
+            if not has_digits: reason += "No digits. "
+            print(f"⚠️ Validation failed: {reason} Sample: {text_lower[:200]}...")
+
         # Valid if it has both digits and medical context
         return has_identifier and has_digits
 
     def parse_lab_data(self, text: str) -> str:
         """
-        STEP 5 & 6: Lab Data Parsing & Rule-Based Interpretation
-        Extracts markers, values, and ranges using regex.
+        Senior AI Engineer Logic: Uses LabParser for robust extraction.
         """
-        # Common patterns for lab results: "TestName Result [Status] Range Unit"
-        patterns = [
-            # CBC Table Style: Name Value [Status] Low - High Unit
-            r"([a-zA-Z\s\(\)\.]+)\s+(\d+\.?\d*)\s+(?:Low|High|Borderline|Normal|)\s*(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s+([a-zA-Z/%/]+)",
-            # Pattern: Name Result Unit (Range)
-            r"([a-zA-Z\s\(\)\.]+)\s+(\d+\.?\d*)\s*([a-zA-Z/%/]+)\s*[\(\[]?(\d+\.?\d*)\s*-\s*(\d+\.?\d*)[\)\]]?",
-            # Pattern: Name Result (Range)
-            r"([a-zA-Z\s\(\)\.]+)\s+(\d+\.?\d*)\s*[\(\[]?(\d+\.?\d*)\s*-\s*(\d+\.?\d*)[\)\]]?",
-            # Pattern: Name: Result
-            r"([a-zA-Z\s\(\)\.]+):\s*(\d+\.?\d*)"
-        ]
+        print(f"🔍 Parsing lab data from text ({len(text)} chars)...")
+        parsed = lab_parser.parse(text)
         
-        parsed_results = []
-        lines = text.split('\n')
-        
-        for line in lines:
-            line = line.strip()
-            if not line: continue
+        # Requirement: If fewer than 1 valid tests are extracted, return error
+        # (Relaxed from 3 to 1 to support single-test reports, but with warning)
+        if len(parsed["tests"]) == 0:
+            print(f"⚠️ Parser found 0 tests. Sample text: {text[:200]}...")
+            return "ERROR: We couldn't find any recognizable lab results in this report. Please ensure it is a valid medical report and the text is legible."
             
-            for pattern in patterns:
-                match = re.search(pattern, line)
-                if match:
-                    groups = match.groups()
-                    name = groups[0].strip()
-                    try:
-                        value = float(groups[1])
-                    except ValueError:
-                        continue
-                    
-                    # Deterministic Interpretation
-                    status = "Normal"
-                    
-                    # If we have 5 groups (Table or Pattern 1)
-                    if len(groups) == 5:
-                        try:
-                            # Group 2 and 3 are low/high in Pattern 1, or group 3 and 4 in Pattern 2
-                            # We detect based on which ones are numeric
-                            if "-" in text[match.start():match.end()]:
-                                low = float(groups[2]) if groups[2].replace('.','',1).isdigit() else float(groups[3])
-                                high = float(groups[3]) if groups[3].replace('.','',1).isdigit() else float(groups[4])
-                                unit = groups[4] if not groups[4].replace('.','',1).isdigit() else groups[2]
-                                
-                                if value < low: status = "Low"
-                                elif value > high: status = "High"
-                                parsed_results.append(f"{name}: {value} {unit} (Range: {low}-{high}) -> {status}")
-                            else:
-                                parsed_results.append(f"{name}: {value} {groups[2]}")
-                        except:
-                            parsed_results.append(f"{name}: {value}")
-                    elif len(groups) >= 4: # Pattern 3
-                        try:
-                            low = float(groups[-2])
-                            high = float(groups[-1])
-                            if value < low: status = "Low"
-                            elif value > high: status = "High"
-                            parsed_results.append(f"{name}: {value} (Range: {low}-{high}) -> {status}")
-                        except:
-                            parsed_results.append(f"{name}: {value}")
-                    else:
-                        parsed_results.append(f"{name}: {value}")
-                    break
+        if len(parsed["tests"]) < 3:
+            print(f"⚠️ Parser found only {len(parsed['tests'])} tests. This might be a partial or single-test report.")
+            
+        # Format as string for LLM consumption while keeping structure
+        output = [f"REPORT TYPE: {parsed['report_type']}"]
+        for test in parsed["tests"]:
+            output.append(f"{test['test_name']}: {test['value']} {test['unit']} (Range: {test['range']}) -> {test['status']}")
         
-        if parsed_results:
-            return "\n".join(parsed_results)
-        return text # Fallback to raw text if parsing fails
+        return "\n".join(output)
+
 
     def extract_text_from_image(self, file_bytes: bytes) -> str:
         """
@@ -185,17 +156,21 @@ class ReportProcessor:
         try:
             image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
             image_np = np.array(image)
+            print(f"📸 Image loaded: {image.size} {image.mode}")
             
             # Attempt 1: Preprocessed image
             processed_img = self.preprocess_image(image_np)
+            print("🔍 Running OCR on preprocessed image...")
             results = self.reader.readtext(processed_img)
             text = " ".join([res[1] for res in results])
+            print(f"🔍 OCR Attempt 1 found {len(results)} text blocks, {len(text)} chars.")
             
             # Attempt 2: Fallback to original image if validation fails
             if not self.validate_extracted_text(text):
                 print("🔄 OCR attempt 1 failed validation. Retrying with original image...")
                 results = self.reader.readtext(image_np)
                 text = " ".join([res[1] for res in results])
+                print(f"🔍 OCR Attempt 2 found {len(results)} text blocks, {len(text)} chars.")
                 
             return text.strip()
         except Exception as e:
@@ -251,24 +226,31 @@ class ReportProcessor:
         Unified entry point for report processing.
         Ensures graceful degradation and partial data handling.
         """
+        print(f"🚀 Starting process_report for: {filename}")
         validation_error = self.validate_file(file_bytes, filename)
         if validation_error:
+            print(f"❌ File validation error: {validation_error}")
             return {"type": "error", "content": validation_error, "filename": filename}
 
         filename_lower = filename.lower()
         content = ""
 
         if filename_lower.endswith(".pdf"):
+            print(f"📄 Processing PDF: {filename}")
             content = self.extract_text_from_pdf(file_bytes)
         elif filename_lower.endswith((".jpg", ".jpeg", ".png")):
+            print(f"📷 Processing Image: {filename}")
             content = self.extract_text_from_image(file_bytes)
             # Mandatory check: digits + keywords
             if not content or not self.validate_extracted_text(content):
+                print(f"❌ Image validation failed. Extracted text sample: {content[:100] if content else 'NONE'}")
                 content = "ERROR: We couldn't analyze this image because the text was unclear. Please ensure the photo is well-lit and legible."
             else:
+                print(f"✅ Image validation passed. Extracted {len(content)} chars.")
                 # If OCR passed validation, we MUST provide a response, even if parsing is partial
                 content = self.parse_lab_data(content)
         
+        print(f"🏁 process_report finished for {filename}. Result type: {'error' if content.startswith('ERROR') else 'success'}")
         if content.startswith("ERROR:"):
             return {"type": "error", "content": content.replace("ERROR: ", ""), "filename": filename}
 

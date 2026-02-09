@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from .database import get_db
 from .models import User, ChangePasswordTOTP
 from .auth import get_current_user, pwd_context
@@ -40,7 +40,7 @@ async def initiate_change_password(
         # We still need a TOTP entry to track verification state for the password change flow
         db.query(ChangePasswordTOTP).filter(ChangePasswordTOTP.user_id == current_user.id).delete()
         
-        expires_at = datetime.utcnow() + timedelta(minutes=TOTP_EXPIRY_MINUTES)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=TOTP_EXPIRY_MINUTES)
         totp_entry = ChangePasswordTOTP(
             user_id=current_user.id,
             secret_encrypted=current_user.otp_secret, # Reuse the permanent secret
@@ -62,7 +62,7 @@ async def initiate_change_password(
     existing_entry = db.query(ChangePasswordTOTP).filter(
         ChangePasswordTOTP.user_id == current_user.id,
         ChangePasswordTOTP.verified == 0,
-        ChangePasswordTOTP.expires_at > datetime.utcnow()
+        ChangePasswordTOTP.expires_at > datetime.now(timezone.utc)
     ).first()
     
     if existing_entry:
@@ -75,7 +75,7 @@ async def initiate_change_password(
         
         secret = TOTPUtility.generate_secret()
         encrypted_secret = TOTPUtility.encrypt_secret(secret)
-        expires_at = datetime.utcnow() + timedelta(minutes=TOTP_EXPIRY_MINUTES)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=TOTP_EXPIRY_MINUTES)
         
         totp_entry = ChangePasswordTOTP(
             user_id=current_user.id,
@@ -116,7 +116,7 @@ async def verify_password_change_otp(
     if not totp_entry:
         raise HTTPException(status_code=400, detail="No active change password request found.")
     
-    if datetime.utcnow() > totp_entry.expires_at:
+    if datetime.now(timezone.utc) > totp_entry.expires_at:
         db.delete(totp_entry)
         db.commit()
         await audit_logger.log_event(
@@ -178,7 +178,7 @@ async def complete_password_change(
     if not totp_entry:
         raise HTTPException(status_code=400, detail="OTP not verified or request expired.")
     
-    if datetime.utcnow() > totp_entry.expires_at:
+    if datetime.now(timezone.utc) > totp_entry.expires_at:
         db.delete(totp_entry)
         db.commit()
         raise HTTPException(status_code=400, detail="Request expired. Please start over.")

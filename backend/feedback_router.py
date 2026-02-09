@@ -12,6 +12,7 @@ class FeedbackRequest(BaseModel):
     rating: str # "positive" or "negative"
     comment: Optional[str] = None
     context: Optional[str] = None # Optional context (e.g. summary of the report)
+    report_id: Optional[str] = None
 
 @router.post("/")
 async def submit_feedback(
@@ -24,7 +25,8 @@ async def submit_feedback(
         user_id=user_id_str,
         rating=feedback.rating,
         comment=feedback.comment,
-        context=feedback.context
+        context=feedback.context,
+        report_id=feedback.report_id
     )
     
     await audit_logger.log_event(

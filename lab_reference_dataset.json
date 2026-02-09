@@ -1,0 +1,722 @@
+[
+  {
+    "id": "lab_hemoglobin",
+    "text": "Hemoglobin (Hgb) is a protein in your red blood cells that carries oxygen from your lungs to the rest of your body. It also transports carbon dioxide back to your lungs to be exhaled. This test measures the amount of hemoglobin in your blood, which is a key indicator of your blood's ability to carry oxygen. Normal adult ranges are typically 13.5-17.5 g/dL for men and 12.0-15.5 g/dL for women. High hemoglobin (polycythemia) can be caused by smoking, living at high altitudes, dehydration, or conditions like polycythemia vera. Low hemoglobin (anemia) often indicates that the body isn't producing enough red blood cells or is losing them too quickly. Common causes of low levels include iron deficiency, vitamin B12 or folate deficiency, chronic kidney disease, or blood loss. Red flag values are typically below 7.0 g/dL (severe anemia requiring possible transfusion) or above 20.0 g/dL. If your levels are outside the normal range, you should consult a doctor to identify the underlying cause. Note: This is for informational purposes and not a diagnosis.",
+    "metadata": {
+      "testKey": "hemoglobin",
+      "testName": "Hemoglobin",
+      "category": "CBC",
+      "aliases": ["hgb", "hb", "hemoglobin level"],
+      "typicalUnits": ["g/dL", "g/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_rbc_count",
+    "text": "The Red Blood Cell (RBC) count measures the number of oxygen-carrying cells in a volume of blood. These cells are vital for delivering oxygen to tissues. Normal ranges are generally 4.7-6.1 million cells/mcL for men and 4.2-5.4 million cells/mcL for women. High RBC counts (erythrocytosis) may result from dehydration, smoking, congenital heart disease, or pulmonary fibrosis. Low RBC counts (anemia) can be caused by nutritional deficiencies (iron, B12, folate), bone marrow failure, or chronic inflammatory diseases. Symptoms of low RBCs include fatigue, shortness of breath, and pale skin. Urgent values include extremely high counts that increase blood viscosity or very low counts that compromise oxygen delivery. If results are abnormal, a physician may order follow-up tests like reticulocyte counts or iron studies. Always discuss results with a healthcare provider for proper interpretation. This information is not a substitute for professional medical advice.",
+    "metadata": {
+      "testKey": "rbc_count",
+      "testName": "Red Blood Cell Count",
+      "category": "CBC",
+      "aliases": ["rbc", "erythrocyte count", "red cells"],
+      "typicalUnits": ["million/mcL", "x10^12/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_hematocrit",
+    "text": "Hematocrit (Hct) measures the proportion of your total blood volume that is composed of red blood cells. It is expressed as a percentage. For example, a hematocrit of 40% means that 40 milliliters of red blood cells are present in 100 milliliters of blood. Normal ranges are typically 41%-50% for men and 36%-44% for women. A high hematocrit can indicate dehydration, low oxygen levels in the blood (hypoxia), or overproduction of red cells. A low hematocrit is a sign of anemia, which could be due to blood loss, bone marrow problems, or nutritional deficiencies. Red flag values include a hematocrit below 21% or above 60%. Significant deviations require immediate medical evaluation to determine the cause and prevent complications like organ strain or blood clots. Next steps usually involve a full clinical assessment and potentially more specific blood tests. This content is for educational purposes only and does not constitute a medical diagnosis.",
+    "metadata": {
+      "testKey": "hematocrit",
+      "testName": "Hematocrit",
+      "category": "CBC",
+      "aliases": ["hct", "packed cell volume", "pcv"],
+      "typicalUnits": ["%"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_wbc",
+    "text": "White Blood Cells (WBCs), or leukocytes, are the core of your immune system, helping the body fight infections and other diseases. The WBC count measures the total number of these cells in your blood. A normal range is typically 4,500 to 11,000 cells per microliter (mcL). A high WBC count (leukocytosis) often signals an active infection, inflammation, physical stress, or an immune system disorder. In rare cases, very high levels can indicate bone marrow disease or leukemia. A low WBC count (leukopenia) suggests a higher risk of infection and can be caused by bone marrow damage, autoimmune conditions, or certain medications like chemotherapy. Red flag values include counts below 2,000/mcL or above 30,000/mcL, which require urgent medical attention. If your count is abnormal, a 'WBC differential' is usually performed to see which specific type of white cell is affected. Always consult your doctor for a complete diagnosis. This summary is informational and not medical advice.",
+    "metadata": {
+      "testKey": "wbc",
+      "testName": "White Blood Cell Count",
+      "category": "CBC",
+      "aliases": ["wbc", "leukocytes", "white count"],
+      "typicalUnits": ["cells/mcL", "x10^9/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_neutrophils",
+    "text": "Neutrophils are the most common type of white blood cell and are the first responders to bacterial infections. This test measures the percentage or absolute number of neutrophils in your blood. They typically make up 40% to 60% of total WBCs. High neutrophil levels (neutrophilia) are most commonly caused by bacterial infections, acute stress, or inflammatory conditions like rheumatoid arthritis. Low levels (neutropenia) significantly increase the risk of severe infection and can be caused by chemotherapy, viral infections, or bone marrow disorders. A red flag value is an Absolute Neutrophil Count (ANC) below 500 cells/mcL, which is considered a medical emergency due to the high risk of life-threatening infection. If results are abnormal, doctors will investigate for underlying infections or bone marrow health. Do not interpret these results in isolation; clinical context is essential. This guide is for education and not for diagnosis.",
+    "metadata": {
+      "testKey": "neutrophils",
+      "testName": "Neutrophils",
+      "category": "CBC",
+      "aliases": ["polys", "segs", "anc", "neutrophil percentage"],
+      "typicalUnits": ["%", "cells/mcL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_lymphocytes",
+    "text": "Lymphocytes are white blood cells that include B cells (which make antibodies) and T cells (which fight viruses and tumors). They are crucial for long-term immunity. They normally account for 20% to 40% of total WBCs. High lymphocyte counts (lymphocytosis) often occur during viral infections (like mono or flu), chronic infections, or certain types of blood cancers. Low lymphocyte counts (lymphocytopenia) can be seen in severe physical stress, malnutrition, or immune-suppressing conditions like HIV/AIDS or steroid use. Red flag values are typically very low absolute lymphocyte counts (below 1,000 cells/mcL in adults). Abnormal results usually prompt a search for viral illnesses or chronic inflammatory states. It is important to look at the total WBC count alongside these results. Consult a healthcare professional for an accurate assessment. This information is intended for educational purposes only.",
+    "metadata": {
+      "testKey": "lymphocytes",
+      "testName": "Lymphocytes",
+      "category": "CBC",
+      "aliases": ["lymphs", "lymphocyte percentage"],
+      "typicalUnits": ["%", "cells/mcL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_monocytes",
+    "text": "Monocytes are a type of white blood cell that migrates into tissues to become macrophages, which 'eat' bacteria and cellular debris. They typically make up 2% to 8% of total WBCs. High monocyte levels (monocytosis) can indicate chronic infections (like tuberculosis), inflammatory diseases (like lupus), or certain blood disorders. Low monocyte levels are rare and usually occur when the total WBC count is very low. While isolated monocyte changes are often less concerning than other WBC types, persistent elevations should be evaluated by a physician. There are no specific 'urgent' monocyte values, but they are interpreted as part of the whole differential. Next steps include monitoring for symptoms of chronic inflammation or infection. Please consult a doctor for a personalized explanation of your lab report. This is an educational resource, not a diagnostic tool.",
+    "metadata": {
+      "testKey": "monocytes",
+      "testName": "Monocytes",
+      "category": "CBC",
+      "aliases": ["monos", "monocyte count"],
+      "typicalUnits": ["%", "cells/mcL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_eosinophils",
+    "text": "Eosinophils are white blood cells primarily involved in fighting parasitic infections and participating in allergic reactions. They normally make up 1% to 4% of total WBCs. High eosinophil counts (eosinophilia) are most frequently associated with asthma, hay fever, eczema, or parasitic infestations. Occasionally, they can be elevated in more serious autoimmune or blood conditions. Low eosinophil counts are generally not considered clinically significant on their own. A red flag would be a very high absolute count (e.g., above 1,500 cells/mcL), which can sometimes damage organs if sustained. If elevated, your doctor may ask about allergies, recent travel, or skin rashes. An accurate diagnosis requires a full medical history and physical exam. This information provides a general overview and is not a substitute for medical consultation.",
+    "metadata": {
+      "testKey": "eosinophils",
+      "testName": "Eosinophils",
+      "category": "CBC",
+      "aliases": ["eos", "eosinophil count"],
+      "typicalUnits": ["%", "cells/mcL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_basophils",
+    "text": "Basophils are the least common type of white blood cell and are involved in allergic responses and releasing histamine. They typically make up less than 1% of total WBCs. An elevated basophil count (basophilia) is rare and can be seen in allergic reactions, chronic inflammation, or certain bone marrow disorders like chronic myeloid leukemia. Low levels are difficult to measure and usually not clinically significant. Because they are so rare, any significant and persistent increase is usually a reason for a hematology referral. There are no specific urgent values for basophils alone, as they are always interpreted in context with other WBCs. If your basophils are high, your doctor will likely look at your overall blood count and clinical symptoms. Always rely on a medical professional for diagnosis. This content is for informational use only.",
+    "metadata": {
+      "testKey": "basophils",
+      "testName": "Basophils",
+      "category": "CBC",
+      "aliases": ["basos", "basophil count"],
+      "typicalUnits": ["%", "cells/mcL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_platelets",
+    "text": "Platelets (thrombocytes) are small cell fragments that are essential for blood clotting. When you get a cut, platelets stick together to form a plug and stop the bleeding. A normal platelet count ranges from 150,000 to 450,000 cells per microliter (mcL). A high platelet count (thrombocytosis) can occur due to inflammation, iron deficiency, or bone marrow disorders, and it can increase the risk of blood clots. A low platelet count (thrombocytopenia) can lead to easy bruising or excessive bleeding and can be caused by viral infections (like dengue), autoimmune diseases, or bone marrow suppression. Red flag values are counts below 20,000/mcL (high risk of spontaneous bleeding) or above 1,000,000/mcL (high risk of clotting or bleeding paradox). If your count is low, avoid activities with a high risk of injury. Seek immediate care for unexplained bruising or bleeding. Consult a doctor for a definitive diagnosis. This is an educational guide.",
+    "metadata": {
+      "testKey": "platelets",
+      "testName": "Platelets",
+      "category": "CBC",
+      "aliases": ["plt", "platelet count", "thrombocytes"],
+      "typicalUnits": ["cells/mcL", "K/uL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_mcv",
+    "text": "Mean Corpuscular Volume (MCV) measures the average size of your red blood cells. It is a critical value for classifying types of anemia. The normal range is 80 to 100 femtoliters (fL). A high MCV (macrocytosis) means your red blood cells are larger than normal, which is often caused by vitamin B12 or folate deficiency, or excessive alcohol use. A low MCV (microcytosis) means your cells are smaller than normal, which is most commonly caused by iron deficiency or genetic conditions like thalassemia. If your MCV is outside the normal range but your hemoglobin is normal, it may be an early sign of a developing nutritional issue. Significant abnormalities require investigation into your diet, absorption, or family history. Always discuss these indices with your healthcare provider for a proper diagnosis. This content is for educational purposes only.",
+    "metadata": {
+      "testKey": "mcv",
+      "testName": "Mean Corpuscular Volume",
+      "category": "CBC",
+      "aliases": ["mcv", "rbc size"],
+      "typicalUnits": ["fL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_mch",
+    "text": "Mean Corpuscular Hemoglobin (MCH) is the average amount of hemoglobin in a single red blood cell. It is closely related to the MCV. The normal range is 27 to 33 picograms (pg). Low MCH values are typically seen in iron deficiency anemia, where cells are small and pale (hypochromic). High MCH values often occur when red cells are larger than normal, such as in B12 or folate deficiency. MCH is rarely interpreted on its own; it is used alongside MCV and MCHC to pinpoint the type of anemia. If your MCH is low, your doctor might check your iron levels. If it is high, they might check your vitamin levels. Always consult a medical professional for an accurate interpretation of your lab results. This information is intended for educational use and is not a medical diagnosis.",
+    "metadata": {
+      "testKey": "mch",
+      "testName": "Mean Corpuscular Hemoglobin",
+      "category": "CBC",
+      "aliases": ["mch", "hemoglobin per cell"],
+      "typicalUnits": ["pg"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_mchc",
+    "text": "Mean Corpuscular Hemoglobin Concentration (MCHC) measures the average concentration of hemoglobin in a given volume of red blood cells. It reflects how 'packed' the cells are with hemoglobin. The normal range is 32 to 36 g/dL. Low MCHC (hypochromia) is a hallmark of iron deficiency anemia. High MCHC can occur in conditions where red cells are unusually shaped or fragile, such as hereditary spherocytosis, or in cases of severe dehydration. Like other RBC indices, MCHC helps narrow down the cause of anemia. If your MCHC is abnormal, follow-up tests will depend on your symptoms and other blood count values. Interpretation must be done by a qualified healthcare professional. This resource is for information and does not provide medical diagnoses.",
+    "metadata": {
+      "testKey": "mchc",
+      "testName": "Mean Corpuscular Hemoglobin Concentration",
+      "category": "CBC",
+      "aliases": ["mchc", "hemoglobin concentration"],
+      "typicalUnits": ["g/dL", "%"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_rdw",
+    "text": "Red Cell Distribution Width (RDW) measures the variation in the size of your red blood cells. A normal RDW means your red blood cells are all roughly the same size, while a high RDW means there is a large difference between the smallest and largest cells. The normal range is 11% to 15%. A high RDW is often an early sign of nutritional deficiency (iron, B12, or folate) even before anemia develops, as the body starts producing cells of irregular sizes. It can also be elevated in recent blood loss or chronic diseases. A low RDW is generally not a cause for concern. If your RDW is high, your doctor will look at your MCV and hemoglobin to find the cause. Please consult your physician for a complete evaluation. This information is for educational purposes and not a diagnosis.",
+    "metadata": {
+      "testKey": "rdw",
+      "testName": "Red Cell Distribution Width",
+      "category": "CBC",
+      "aliases": ["rdw-cv", "rdw-sd", "rbc variation"],
+      "typicalUnits": ["%", "fL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_esr",
+    "text": "Erythrocyte Sedimentation Rate (ESR) is a non-specific test that measures how quickly red blood cells sink to the bottom of a tube. When inflammation is present in the body, certain proteins make red cells clump together and sink faster. Normal ranges vary by age and sex, but generally, it is below 15 mm/hr for men and below 20 mm/hr for women. A high ESR indicates inflammation, which can be caused by infections, autoimmune diseases (like lupus or RA), or some cancers. A very high ESR (above 100 mm/hr) is a red flag and usually indicates a serious underlying condition. Because ESR is non-specific, it cannot tell where the inflammation is or what is causing it; it simply says 'something is happening'. Next steps involve more specific tests like CRP or imaging. Consult a doctor for interpretation. This is for educational use only.",
+    "metadata": {
+      "testKey": "esr",
+      "testName": "Erythrocyte Sedimentation Rate",
+      "category": "CBC",
+      "aliases": ["sed rate", "sedimentation rate"],
+      "typicalUnits": ["mm/hr"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_fasting_glucose",
+    "text": "Fasting Blood Glucose measures the level of sugar (glucose) in your blood after you haven't eaten for at least 8 hours. It is a primary test for diagnosing diabetes and prediabetes. Normal: 70-99 mg/dL. Prediabetes: 100-125 mg/dL. Diabetes: 126 mg/dL or higher on two separate tests. High levels (hyperglycemia) indicate that your body isn't producing enough insulin or can't use it effectively. Low levels (hypoglycemia, below 70 mg/dL) can cause shakiness, sweating, and confusion, often caused by diabetes medications or excessive fasting. A red flag value is glucose above 250 mg/dL or below 50 mg/dL, requiring immediate attention. If results are high, a doctor will likely recommend an HbA1c test and lifestyle changes. Always consult a professional for diagnosis. This is educational content.",
+    "metadata": {
+      "testKey": "fasting_glucose",
+      "testName": "Fasting Blood Glucose",
+      "category": "Diabetes",
+      "aliases": ["fbs", "fasting sugar", "fbg"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_random_glucose",
+    "text": "Random Blood Glucose measures your blood sugar at any time of the day, regardless of when you last ate. It is often used for quick screening or in emergencies. A normal level is generally below 140 mg/dL, though it can vary based on your last meal. A random glucose level of 200 mg/dL or higher, especially with symptoms like excessive thirst or frequent urination, strongly suggests diabetes. High levels indicate the body's inability to manage sugar spikes. Low levels (hypoglycemia) are less common in non-diabetics but can occur. Red flag: glucose above 300 mg/dL (risk of ketoacidosis) or below 50 mg/dL. If random glucose is high, a formal fasting test or HbA1c is needed for diagnosis. See a doctor if you have symptoms of high blood sugar. This is for information only.",
+    "metadata": {
+      "testKey": "random_glucose",
+      "testName": "Random Blood Glucose",
+      "category": "Diabetes",
+      "aliases": ["rbg", "random sugar", "casual glucose"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_postprandial_glucose",
+    "text": "Postprandial Glucose measures blood sugar exactly 2 hours after the start of a meal. It shows how well your body handles a 'sugar load' from food. A normal 2-hour result is typically below 140 mg/dL. Levels between 140-199 mg/dL suggest prediabetes (impaired glucose tolerance), and 200 mg/dL or higher indicates diabetes. High levels mean your insulin response is delayed or insufficient. Low levels after a meal (reactive hypoglycemia) can sometimes occur. A red flag value is anything above 250 mg/dL after 2 hours. If your postprandial sugar is consistently high, your doctor may adjust your diet or medications. This test is crucial for managing diabetes. Consult your physician for a personalized plan. This summary is educational and not diagnostic.",
+    "metadata": {
+      "testKey": "postprandial_glucose",
+      "testName": "Postprandial Blood Glucose (2hr)",
+      "category": "Diabetes",
+      "aliases": ["2hr pp", "ppbg", "after meal sugar"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_hba1c",
+    "text": "Hemoglobin A1c (HbA1c) measures your average blood sugar levels over the past 2 to 3 months. It reflects the percentage of hemoglobin that has sugar attached to it. Normal: below 5.7%. Prediabetes: 5.7% to 6.4%. Diabetes: 6.5% or higher. HbA1c is the 'gold standard' for long-term diabetes management. High levels mean blood sugar has been consistently high, increasing the risk of complications like heart disease or nerve damage. Low levels are rare but can occur in certain anemias. A red flag value is above 9% for many adults, indicating poor control. If your A1c is high, your doctor will discuss diet, exercise, or medication. It does not replace daily finger-stick tests but complements them. Consult your doctor for targets. This is for educational purposes.",
+    "metadata": {
+      "testKey": "hba1c",
+      "testName": "Hemoglobin A1c",
+      "category": "Diabetes",
+      "aliases": ["a1c", "glycated hemoglobin", "average sugar"],
+      "typicalUnits": ["%"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_insulin_level",
+    "text": "The Fasting Insulin test measures the amount of insulin in your blood after an 8-hour fast. Insulin is the hormone that moves sugar from the blood into cells. Normal fasting levels are typically 2-20 mIU/L. High fasting insulin (hyperinsulinemia) often indicates 'Insulin Resistance', where your body needs more insulin to keep blood sugar normal; this is a precursor to Type 2 diabetes and PCOS. Low insulin levels are seen in Type 1 diabetes, where the pancreas fails to produce it. There isn't a single 'urgent' insulin value, but very high levels suggest metabolic syndrome. If your insulin is high, focusing on a low-glycemic diet and exercise is usually the next step. Consult an endocrinologist for a full hormonal assessment. This content is educational, not medical advice.",
+    "metadata": {
+      "testKey": "insulin_level",
+      "testName": "Fasting Insulin",
+      "category": "Diabetes",
+      "aliases": ["serum insulin", "fasting insulin"],
+      "typicalUnits": ["mIU/L", "pmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_c_peptide",
+    "text": "C-peptide is a byproduct created when the pancreas produces insulin. Measuring C-peptide tells doctors how much insulin your body is making on its own, which helps distinguish between Type 1 and Type 2 diabetes. Normal range: 0.5 to 2.0 ng/mL. Low C-peptide levels mean your pancreas is making little to no insulin (common in Type 1 diabetes). High C-peptide levels mean your pancreas is overproducing insulin, often due to insulin resistance in Type 2 diabetes or a rare insulin-secreting tumor. It is often measured alongside blood glucose. If levels are very low in a known diabetic, it may signal the need for insulin therapy. Always consult a specialist like an endocrinologist for interpretation. This resource is for information and not a diagnosis.",
+    "metadata": {
+      "testKey": "c_peptide",
+      "testName": "C-Peptide",
+      "category": "Diabetes",
+      "aliases": ["connecting peptide", "insulin secretion test"],
+      "typicalUnits": ["ng/mL", "nmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_tsh",
+    "text": "Thyroid Stimulating Hormone (TSH) is produced by the pituitary gland to tell the thyroid how much hormone to make. It is the most sensitive test for thyroid function. Normal range: 0.4 to 4.0 mIU/L. High TSH means your thyroid is underactive (Hypothyroidism)—the brain is screaming for more hormone. Symptoms include weight gain, fatigue, and feeling cold. Low TSH means your thyroid is overactive (Hyperthyroidism)—the brain has stopped signaling because there is too much hormone. Symptoms include weight loss, anxiety, and fast heartbeat. Red flag: TSH above 10 or below 0.1, especially with symptoms. If TSH is abnormal, doctors usually check Free T4. Treatment often involves medication to balance levels. Consult a doctor for a personalized plan. This is an educational guide.",
+    "metadata": {
+      "testKey": "tsh",
+      "testName": "Thyroid Stimulating Hormone",
+      "category": "Thyroid",
+      "aliases": ["tsh", "thyrotropin"],
+      "typicalUnits": ["mIU/L", "uIU/mL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_free_t4",
+    "text": "Free T4 (Thyroxine) is the active form of the main hormone produced by the thyroid gland. 'Free' means it's not bound to proteins and is available for your body to use. Normal range: 0.8 to 1.8 ng/dL. Low Free T4 with a high TSH confirms Hypothyroidism (underactive thyroid). High Free T4 with a low TSH confirms Hyperthyroidism (overactive thyroid). High levels can cause palpitations and heat intolerance, while low levels cause sluggishness and dry skin. A red flag is a very high T4, which could lead to a 'thyroid storm' (medical emergency). Next steps include checking for thyroid antibodies or an ultrasound if levels are persistent. Always follow up with an endocrinologist. This summary is educational and not diagnostic.",
+    "metadata": {
+      "testKey": "free_t4",
+      "testName": "Free T4",
+      "category": "Thyroid",
+      "aliases": ["ft4", "free thyroxine"],
+      "typicalUnits": ["ng/dL", "pmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_free_t3",
+    "text": "Free T3 (Triiodothyronine) is the most potent thyroid hormone. Much of the T4 in your body is converted into T3. Normal range: 2.3 to 4.2 pg/mL. This test is most useful for diagnosing Hyperthyroidism, where T3 is often elevated more than T4. High Free T3 can cause severe anxiety, weight loss, and tremors. Low Free T3 is sometimes seen in 'sick euthyroid syndrome' during severe illness or in some cases of hypothyroidism. It is usually measured only if TSH is low but T4 is normal. A red flag is a very high T3 in someone with heart issues. Interpretation requires a full thyroid panel. Consult your doctor for an accurate assessment. This content is for information and not for diagnosis.",
+    "metadata": {
+      "testKey": "free_t3",
+      "testName": "Free T3",
+      "category": "Thyroid",
+      "aliases": ["ft3", "free triiodothyronine"],
+      "typicalUnits": ["pg/mL", "pmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_total_t4",
+    "text": "Total T4 measures the total amount of thyroxine in your blood, including both the 'free' hormone and the hormone bound to proteins. Normal range: 5.0 to 12.0 mcg/dL. Total T4 can be influenced by things that change protein levels, such as pregnancy, birth control pills, or liver disease, making it sometimes less accurate than Free T4. High Total T4 suggests hyperthyroidism, while low levels suggest hypothyroidism. Because it's affected by proteins, it is often interpreted alongside a 'T3 Uptake' test or simply replaced by Free T4. If your Total T4 is high but you feel fine, your doctor may check your protein levels. Always rely on a professional for diagnosis. This is for informational purposes.",
+    "metadata": {
+      "testKey": "total_t4",
+      "testName": "Total T4",
+      "category": "Thyroid",
+      "aliases": ["t4", "thyroxine total"],
+      "typicalUnits": ["mcg/dL", "nmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_total_t3",
+    "text": "Total T3 measures the total amount of triiodothyronine in the blood. Normal range: 80 to 200 ng/dL. Like Total T4, it includes both protein-bound and free hormones. It is most frequently used to evaluate Hyperthyroidism, especially when TSH is low but T4 is normal (T3 toxicosis). High levels can cause rapid heart rate and restlessness. Low levels are common in chronic illness and are not usually the primary way to diagnose an underactive thyroid. If your Total T3 is high, your doctor will look for the cause of an overactive thyroid. Consult your doctor for target ranges. This summary is educational and not diagnostic.",
+    "metadata": {
+      "testKey": "total_t3",
+      "testName": "Total T3",
+      "category": "Thyroid",
+      "aliases": ["t3", "triiodothyronine total"],
+      "typicalUnits": ["ng/dL", "nmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_anti_tpo",
+    "text": "Anti-TPO (Thyroid Peroxidase Antibodies) are proteins the immune system makes to mistakenly attack the thyroid gland. Normal: below 35 IU/mL. A high Anti-TPO level strongly suggests an autoimmune thyroid disease like Hashimoto's Thyroiditis (the most common cause of hypothyroidism) or Graves' Disease. Some people have these antibodies but normal thyroid function; however, they are at higher risk for future thyroid problems. There is no 'urgent' value for antibodies, but high levels explain why a thyroid is failing. If positive, your doctor will monitor your TSH more closely. Treatment targets the hormone levels, not the antibodies themselves. Consult a doctor for a complete plan. This is an educational guide.",
+    "metadata": {
+      "testKey": "anti_tpo",
+      "testName": "Anti-TPO Antibodies",
+      "category": "Thyroid",
+      "aliases": ["tpoab", "thyroid antibodies", "anti-thyroid peroxidase"],
+      "typicalUnits": ["IU/mL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_creatinine",
+    "text": "Creatinine is a waste product from muscle breakdown that is filtered out of the blood by the kidneys. It is the most common marker for kidney function. Normal range: 0.7 to 1.3 mg/dL for men, 0.6 to 1.1 mg/dL for women. High creatinine means the kidneys are not filtering efficiently, which can indicate dehydration, kidney infection, or chronic kidney disease. Low creatinine is rare and usually due to low muscle mass or severe malnutrition. A red flag value is a sudden rise or a level above 2.0 mg/dL, which requires urgent evaluation. If creatinine is high, doctors calculate the eGFR to see the stage of kidney function. Next steps include staying hydrated and avoiding certain medications like NSAIDs (ibuprofen). Consult a doctor for a full assessment. This is for educational use only.",
+    "metadata": {
+      "testKey": "creatinine",
+      "testName": "Creatinine",
+      "category": "KFT",
+      "aliases": ["cr", "serum creatinine"],
+      "typicalUnits": ["mg/dL", "umol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_urea",
+    "text": "Urea is a waste product formed in the liver when proteins are broken down. It is excreted by the kidneys. Normal range: 15 to 45 mg/dL. High urea (uremia) can mean the kidneys aren't working well, but it is also affected by a high-protein diet, dehydration, or gastrointestinal bleeding. Low urea is less common and can be seen in liver disease or malnutrition. Urea is usually measured alongside creatinine (the BUN/Creatinine ratio) to help determine if high levels are due to kidney disease or dehydration. A red flag is a level above 100 mg/dL, which can cause confusion and fatigue. If high, ensure adequate hydration and follow up with a kidney specialist if needed. Always consult your doctor for interpretation. This resource is informational and not a diagnosis.",
+    "metadata": {
+      "testKey": "urea",
+      "testName": "Blood Urea",
+      "category": "KFT",
+      "aliases": ["serum urea", "urea level"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_bun",
+    "text": "Blood Urea Nitrogen (BUN) measures the amount of nitrogen in your blood that comes from urea. It is very similar to the urea test. Normal range: 7 to 20 mg/dL. High BUN levels suggest that the kidneys are not functioning properly, or that the body is dehydrated or has had a high protein intake. Low BUN levels can be seen in late pregnancy, malnutrition, or liver failure. Like urea, it's best interpreted with creatinine. A red flag is a BUN above 50 mg/dL in someone with symptoms of kidney trouble. If high, drink plenty of water and review your protein intake with a doctor. Always consult a healthcare professional for diagnosis. This summary is educational and not medical advice.",
+    "metadata": {
+      "testKey": "bun",
+      "testName": "Blood Urea Nitrogen",
+      "category": "KFT",
+      "aliases": ["bun", "urea nitrogen"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_egfr",
+    "text": "Estimated Glomerular Filtration Rate (eGFR) is a calculated value based on your creatinine, age, and sex. it tells you how well your kidneys are filtering blood. Normal: 90 or higher. 60-89: Mildly decreased. 30-59: Moderate kidney disease. 15-29: Severe kidney disease. Below 15: Kidney failure. A high eGFR is normal. A low eGFR means kidney function is declining. A red flag is any value below 60 that is new or persistent, or any value below 15. If your eGFR is low, it is crucial to manage blood pressure and blood sugar to protect the kidneys. Avoid 'nephrotoxic' drugs like ibuprofen. Consult a nephrologist for a personalized plan. This is an educational guide, not a diagnosis.",
+    "metadata": {
+      "testKey": "egfr",
+      "testName": "eGFR",
+      "category": "KFT",
+      "aliases": ["gfr", "estimated gfr", "kidney filtration"],
+      "typicalUnits": ["mL/min/1.73m2"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_sodium",
+    "text": "Sodium is an electrolyte that helps balance water in and around your cells and is vital for nerve and muscle function. Normal range: 135 to 145 mEq/L. High sodium (hypernatremia) is usually caused by dehydration or excessive salt intake. Low sodium (hyponatremia) can be caused by drinking too much water, certain medications (diuretics), or kidney/heart failure. Both high and low sodium can cause confusion, seizures, or coma if extreme. Red flag: levels below 125 or above 155 mEq/L require immediate medical care. If your levels are abnormal, your doctor will investigate your fluid intake and heart/kidney health. Consult a professional for an accurate assessment. This content is for information and not diagnostic.",
+    "metadata": {
+      "testKey": "sodium",
+      "testName": "Sodium",
+      "category": "KFT",
+      "aliases": ["na+", "serum sodium"],
+      "typicalUnits": ["mEq/L", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_potassium",
+    "text": "Potassium is a critical electrolyte for heart rhythm and muscle contraction. Normal range: 3.5 to 5.2 mEq/L. High potassium (hyperkalemia) is dangerous because it can cause life-threatening heart rhythm problems; it's often caused by kidney disease or certain medications. Low potassium (hypokalemia) can cause muscle weakness and heart flutters, often due to vomiting, diarrhea, or diuretics. Red flag: levels below 3.0 or above 6.0 mEq/L are medical emergencies. If your potassium is abnormal, avoid salt substitutes (which often contain potassium) and seek immediate medical advice. An EKG is often needed to check heart safety. Consult your doctor for treatment. This is an educational resource.",
+    "metadata": {
+      "testKey": "potassium",
+      "testName": "Potassium",
+      "category": "KFT",
+      "aliases": ["k+", "serum potassium"],
+      "typicalUnits": ["mEq/L", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_chloride",
+    "text": "Chloride is an electrolyte that works with sodium and potassium to maintain fluid balance and acid-base balance in the body. Normal range: 96 to 106 mEq/L. High chloride (hyperchloremia) can be caused by dehydration, kidney problems, or metabolic acidosis. Low chloride (hypochloremia) can occur with prolonged vomiting, chronic lung disease, or metabolic alkalosis. Isolated chloride changes are rare; they usually move with sodium or reflect an acid-base imbalance. Red flag: extremely high or low levels in the context of severe illness. If abnormal, your doctor will check your other electrolytes and blood pH. Always consult a healthcare professional for diagnosis. This summary is educational and not medical advice.",
+    "metadata": {
+      "testKey": "chloride",
+      "testName": "Chloride",
+      "category": "KFT",
+      "aliases": ["cl-", "serum chloride"],
+      "typicalUnits": ["mEq/L", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_uric_acid",
+    "text": "Uric acid is a waste product formed when the body breaks down purines (found in some foods and drinks). The kidneys filter most uric acid out of the blood. Normal range: 3.5 to 7.2 mg/dL. High levels (hyperuricemia) can cause crystals to form in joints, leading to a painful condition called Gout, or form kidney stones. Low levels are rare and usually not a concern. Red flag: level above 10 mg/dL in someone with joint pain. If high, a low-purine diet (avoiding red meat, organ meats, and beer) and staying hydrated are recommended. Medications can also lower levels. Consult a doctor for a management plan. This is an educational guide.",
+    "metadata": {
+      "testKey": "uric_acid",
+      "testName": "Uric Acid",
+      "category": "KFT",
+      "aliases": ["serum urate", "ua"],
+      "typicalUnits": ["mg/dL", "umol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_alt_sgpt",
+    "text": "Alanine Aminotransferase (ALT), also known as SGPT, is an enzyme found mostly in the liver. When liver cells are damaged, ALT leaks into the bloodstream. Normal range: below 40 U/L. High ALT is a specific sign of liver injury, which can be caused by fatty liver disease, hepatitis, alcohol use, or certain medications. Low ALT is normal. A red flag is a level more than 3 times the normal limit (e.g., above 120 U/L), or a sudden massive spike (above 1000 U/L) which indicates acute liver failure or hepatitis. If ALT is high, next steps include avoiding alcohol and reviewing all supplements/medications. Doctors may order an ultrasound or hepatitis panel. Consult a physician for diagnosis. This is educational content.",
+    "metadata": {
+      "testKey": "alt_sgpt",
+      "testName": "ALT (SGPT)",
+      "category": "LFT",
+      "aliases": ["alt", "sgpt", "alanine aminotransferase"],
+      "typicalUnits": ["U/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_ast_sgot",
+    "text": "Aspartate Aminotransferase (AST), or SGOT, is an enzyme found in the liver, heart, and muscles. Normal range: below 40 U/L. High AST suggests liver or muscle damage. If AST is high but ALT is normal, the issue might be in the heart or muscles rather than the liver. In alcoholic liver disease, AST is often much higher than ALT. Low AST is normal. Red flag: levels above 3 times the normal limit or extremely high levels (acute injury). If high, your doctor will compare it with your ALT and check for symptoms of liver or muscle pain. Next steps include avoiding liver toxins and further testing. Consult your doctor for an accurate assessment. This summary is educational and not diagnostic.",
+    "metadata": {
+      "testKey": "ast_sgot",
+      "testName": "AST (SGOT)",
+      "category": "LFT",
+      "aliases": ["ast", "sgot", "aspartate aminotransferase"],
+      "typicalUnits": ["U/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_alp",
+    "text": "Alkaline Phosphatase (ALP) is an enzyme found in the liver, bile ducts, and bones. Normal range: 44 to 147 U/L. High ALP often indicates a blockage in the bile ducts (like gallstones) or a bone problem (like healing fractures or Vitamin D deficiency). It is naturally high in growing children and pregnant women. Low ALP is rare but can be seen in malnutrition. Red flag: very high levels (above 300 U/L) in an adult, especially with yellowing of the eyes (jaundice). If high, a GGT test can help determine if the ALP is coming from the liver or bones. Consult your doctor for interpretation. This is for informational purposes.",
+    "metadata": {
+      "testKey": "alp",
+      "testName": "Alkaline Phosphatase",
+      "category": "LFT",
+      "aliases": ["alp", "alk phos"],
+      "typicalUnits": ["U/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_total_bilirubin",
+    "text": "Bilirubin is a yellow pigment produced during the normal breakdown of red blood cells. The liver processes it so it can be excreted. Normal range: 0.1 to 1.2 mg/dL. High bilirubin (hyperbilirubinemia) causes Jaundice (yellow skin and eyes) and can be due to liver disease, bile duct blockage, or rapid blood cell breakdown (hemolysis). A harmless condition called Gilbert’s Syndrome can also cause mildly high levels. Red flag: level above 2.5 mg/dL with jaundice. If high, a doctor will check 'direct' vs 'indirect' bilirubin to find the source. Seek medical care if you notice yellowing of your skin. Consult a professional for diagnosis. This is an educational guide.",
+    "metadata": {
+      "testKey": "total_bilirubin",
+      "testName": "Total Bilirubin",
+      "category": "LFT",
+      "aliases": ["t. bili", "bilirubin total"],
+      "typicalUnits": ["mg/dL", "umol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_direct_bilirubin",
+    "text": "Direct (Conjugated) Bilirubin is the form of bilirubin that has been processed by the liver and is ready to be excreted in bile. Normal range: below 0.3 mg/dL. High direct bilirubin specifically suggests a problem with the liver's ability to excrete bilirubin or a blockage in the bile ducts (like a gallstone or tumor). Low levels are normal. Red flag: any significant elevation of direct bilirubin is usually concerning and requires investigation. If high, an ultrasound of the liver and gallbladder is often the next step. Consult a specialist like a gastroenterologist for interpretation. This resource is informational and not a diagnosis.",
+    "metadata": {
+      "testKey": "direct_bilirubin",
+      "testName": "Direct Bilirubin",
+      "category": "LFT",
+      "aliases": ["conjugated bilirubin", "d. bili"],
+      "typicalUnits": ["mg/dL", "umol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_albumin",
+    "text": "Albumin is the main protein made by the liver. It keeps fluid from leaking out of blood vessels and carries hormones and vitamins through the body. Normal range: 3.4 to 5.4 g/dL. Low albumin (hypoalbuminemia) can indicate liver disease, kidney disease (where albumin is lost in urine), or malnutrition. It can cause swelling (edema) in the legs. High albumin is rare and usually caused by severe dehydration. Red flag: very low levels (below 2.0 g/dL) can lead to fluid buildup in the abdomen or lungs. If low, doctors check kidney and liver function and diet. Consult your doctor for target ranges. This summary is educational and not diagnostic.",
+    "metadata": {
+      "testKey": "albumin",
+      "testName": "Albumin",
+      "category": "LFT",
+      "aliases": ["alb", "serum albumin"],
+      "typicalUnits": ["g/dL", "g/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_total_protein",
+    "text": "Total Protein measures the total amount of albumin and globulin in your blood. Normal range: 6.0 to 8.3 g/dL. High total protein can be caused by chronic inflammation, infections, or bone marrow disorders like multiple myeloma. Low total protein can be seen in liver or kidney disease or malnutrition. It is a general screening test and is usually interpreted along with the 'Albumin/Globulin (A/G) ratio'. Red flag: very high levels (above 10 g/dL) require investigation for plasma cell disorders. If abnormal, a 'Protein Electrophoresis' may be the next step. Consult your physician for a complete evaluation. This information is for educational purposes.",
+    "metadata": {
+      "testKey": "total_protein",
+      "testName": "Total Protein",
+      "category": "LFT",
+      "aliases": ["tp", "serum protein"],
+      "typicalUnits": ["g/dL", "g/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_ggt",
+    "text": "Gamma-Glutamyl Transferase (GGT) is an enzyme found mainly in the liver and bile ducts. Normal range: 5 to 40 U/L. GGT is very sensitive to liver and bile duct injury. It is particularly useful because, unlike ALP, it is NOT found in bones. If both ALP and GGT are high, the problem is definitely in the liver. High GGT is also a marker for heavy alcohol use or fatty liver. Low GGT is normal. Red flag: level above 100 U/L in someone with other liver symptoms. If high, avoiding alcohol and weight management are often recommended. Consult a doctor for interpretation. This is for informational use only.",
+    "metadata": {
+      "testKey": "ggt",
+      "testName": "GGT",
+      "category": "LFT",
+      "aliases": ["ggt", "gamma-gt"],
+      "typicalUnits": ["U/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_total_cholesterol",
+    "text": "Total Cholesterol measures the overall amount of cholesterol in your blood, including LDL (bad) and HDL (good). Normal range: below 200 mg/dL is desirable. 200-239: Borderline high. 240 or higher: High. High cholesterol increases the risk of heart disease and stroke by contributing to plaque buildup in arteries. Low cholesterol is generally good, but very low levels are sometimes seen in hyperthyroidism or malnutrition. Red flag: level above 300 mg/dL, especially with other heart risk factors. If high, a heart-healthy diet, exercise, and sometimes statin medications are next steps. Consult your doctor for your specific 'target' based on your risk. This is an educational guide.",
+    "metadata": {
+      "testKey": "total_cholesterol",
+      "testName": "Total Cholesterol",
+      "category": "Lipids",
+      "aliases": ["cholesterol", "tc"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_ldl",
+    "text": "LDL (Low-Density Lipoprotein) is often called 'Bad' cholesterol because it carries cholesterol to your arteries, where it can form plaques. Normal range: below 100 mg/dL is optimal for most. For those with heart disease, the target may be below 70 or even 55 mg/dL. High LDL is a major risk factor for heart attacks and strokes. Low LDL is usually desirable. Red flag: LDL above 190 mg/dL (suggests genetic high cholesterol). If your LDL is high, focus on reducing saturated fats and increasing fiber. Consult your doctor to see what your specific LDL goal should be. This content is for information and not diagnostic.",
+    "metadata": {
+      "testKey": "ldl",
+      "testName": "LDL Cholesterol",
+      "category": "Lipids",
+      "aliases": ["bad cholesterol", "ldl-c"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_hdl",
+    "text": "HDL (High-Density Lipoprotein) is known as 'Good' cholesterol because it helps remove 'bad' cholesterol from your arteries and takes it back to the liver. Normal range: above 40 mg/dL for men and above 50 mg/dL for women. High HDL is protective for the heart (above 60 is optimal). Low HDL increases heart disease risk, even if your total cholesterol is normal. Common causes of low HDL include smoking, obesity, and a sedentary lifestyle. There is no 'urgent' low value, but it signals a need for lifestyle changes like exercise and quitting smoking. Consult your doctor for a full cardiovascular risk profile. This summary is educational and not medical advice.",
+    "metadata": {
+      "testKey": "hdl",
+      "testName": "HDL Cholesterol",
+      "category": "Lipids",
+      "aliases": ["good cholesterol", "hdl-c"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_triglycerides",
+    "text": "Triglycerides are a type of fat (lipid) found in your blood. When you eat, your body converts any calories it doesn't need to use right away into triglycerides. Normal: below 150 mg/dL. 150-199: Borderline high. 200-499: High. Above 500: Very high. High levels are often linked to obesity, uncontrolled diabetes, and high-sugar/alcohol intake. Very high triglycerides (above 500) are a red flag because they can cause acute pancreatitis (inflammation of the pancreas). If high, next steps include reducing sugar, alcohol, and refined carbs. Consult your doctor for treatment. This is an educational guide.",
+    "metadata": {
+      "testKey": "triglycerides",
+      "testName": "Triglycerides",
+      "category": "Lipids",
+      "aliases": ["tg", "trigs"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_vldl",
+    "text": "VLDL (Very Low-Density Lipoprotein) is another type of 'bad' cholesterol that carries triglycerides. It is usually estimated as a percentage of your triglyceride level. Normal range: 2 to 30 mg/dL. High VLDL is usually seen alongside high triglycerides and contributes to plaque buildup in arteries. Low levels are normal. There is no specific urgent VLDL value, but it is treated by managing your overall lipids and triglycerides. Lifestyle changes like weight loss and exercise are key. Consult your doctor for an accurate assessment. This content is for educational use only.",
+    "metadata": {
+      "testKey": "vldl",
+      "testName": "VLDL Cholesterol",
+      "category": "Lipids",
+      "aliases": ["vldl-c"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_non_hdl_cholesterol",
+    "text": "Non-HDL Cholesterol is calculated by subtracting your HDL (good) cholesterol from your Total Cholesterol. It represents ALL the 'bad' types of cholesterol (LDL, VLDL, etc.). Normal range: typically 30 mg/dL higher than your LDL goal (e.g., if LDL goal is 100, non-HDL goal is 130). Many doctors believe this is a better predictor of heart disease risk than LDL alone, especially if you have high triglycerides. High levels mean more plaque-forming potential. Next steps involve managing your overall lipid profile. Consult your doctor for your specific target. This resource is for information and not a diagnosis.",
+    "metadata": {
+      "testKey": "non_hdl_cholesterol",
+      "testName": "Non-HDL Cholesterol",
+      "category": "Lipids",
+      "aliases": ["non-hdl", "total non-hdl"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_vitamin_d",
+    "text": "Vitamin D is essential for bone health and immune function. It helps your body absorb calcium. Normal range: 30 to 100 ng/mL. Deficiency: below 20 ng/mL. Insufficiency: 20-29 ng/mL. Low Vitamin D is extremely common and can cause bone pain, muscle weakness, and fatigue. High levels (toxicity) are rare and usually only from excessive supplementation, which can cause high calcium. Red flag: level below 10 ng/mL (severe deficiency). If low, your doctor will likely recommend a supplement and more sunlight. Re-testing is usually done after 3 months of treatment. Consult your doctor for the right dose. This summary is educational and not diagnostic.",
+    "metadata": {
+      "testKey": "vitamin_d",
+      "testName": "Vitamin D (25-OH)",
+      "category": "Vitamins",
+      "aliases": ["vit d", "25-hydroxyvitamin d"],
+      "typicalUnits": ["ng/mL", "nmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_vitamin_b12",
+    "text": "Vitamin B12 is vital for nerve function, brain health, and red blood cell production. Normal range: 200 to 900 pg/mL. Low B12 (deficiency) can cause anemia, numbness/tingling in hands/feet, memory problems, and fatigue. Common causes include a vegan diet (without supplements) or absorption issues (like pernicious anemia). High B12 is usually from supplements but can occasionally signal liver or blood disorders. Red flag: level below 150 pg/mL (severe deficiency requiring urgent treatment). If low, B12 shots or high-dose oral supplements are the next steps. Consult your doctor for a personalized plan. This is an educational guide.",
+    "metadata": {
+      "testKey": "vitamin_b12",
+      "testName": "Vitamin B12",
+      "category": "Vitamins",
+      "aliases": ["cobalamin", "vit b12"],
+      "typicalUnits": ["pg/mL", "pmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_ferritin",
+    "text": "Ferritin is a protein that stores iron in your cells. It is the best test to see your body's total iron 'savings account'. Normal range: 20 to 250 ng/mL for men, 10 to 150 ng/mL for women. Low ferritin is a definitive sign of iron deficiency, even if your hemoglobin is still normal. High ferritin can be caused by inflammation, liver disease, or a genetic condition called Hemochromatosis (iron overload). Red flag: level below 10 ng/mL (severe iron deficiency) or above 1000 ng/mL. If low, iron supplements and finding the source of iron loss (like heavy periods or GI issues) are next. Consult your doctor for interpretation. This is for informational purposes.",
+    "metadata": {
+      "testKey": "ferritin",
+      "testName": "Ferritin",
+      "category": "Vitamins",
+      "aliases": ["iron stores"],
+      "typicalUnits": ["ng/mL", "ug/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_calcium",
+    "text": "Calcium is one of the most important minerals in the body, essential for bones, teeth, heart rhythm, and nerve signals. Normal range: 8.5 to 10.2 mg/dL. High calcium (hypercalcemia) can be caused by overactive parathyroid glands or some cancers and can lead to kidney stones and confusion. Low calcium (hypocalcemia) can be caused by Vitamin D deficiency or parathyroid issues and can cause muscle cramps or heart flutters. Red flag: levels below 7.0 or above 12.0 mg/dL require urgent medical attention. If abnormal, your doctor will check your Vitamin D and parathyroid hormone (PTH). Consult a professional for diagnosis. This summary is educational and not medical advice.",
+    "metadata": {
+      "testKey": "calcium",
+      "testName": "Calcium",
+      "category": "Vitamins",
+      "aliases": ["ca", "serum calcium"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_magnesium",
+    "text": "Magnesium is a mineral involved in over 300 biochemical reactions, including muscle and nerve function and blood pressure regulation. Normal range: 1.7 to 2.2 mg/dL. Low magnesium (hypomagnesemia) is common and can cause muscle twitches, fatigue, and heart palpitations; it's often due to poor diet, alcoholism, or certain medications. High magnesium is rare and usually from excessive use of laxatives or antacids in people with kidney problems. Red flag: level below 1.2 mg/dL. If low, increasing magnesium-rich foods (nuts, seeds, greens) or supplements is the next step. Consult your doctor for an accurate assessment. This is an educational resource.",
+    "metadata": {
+      "testKey": "magnesium",
+      "testName": "Magnesium",
+      "category": "Vitamins",
+      "aliases": ["mg", "serum magnesium"],
+      "typicalUnits": ["mg/dL", "mmol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_iron",
+    "text": "The Serum Iron test measures the amount of iron currently circulating in your blood. Normal range: 60 to 170 mcg/dL. High iron can be caused by iron overload or multiple blood transfusions. Low iron is a sign of iron deficiency anemia. Because serum iron levels fluctuate greatly throughout the day and after meals, this test is almost always done along with Ferritin and TIBC (Total Iron Binding Capacity) for an accurate picture. Red flag: very low iron in the context of severe anemia. If low, your doctor will look for the cause of iron loss. Consult your physician for a complete evaluation. This content is for information and not diagnostic.",
+    "metadata": {
+      "testKey": "iron",
+      "testName": "Serum Iron",
+      "category": "Vitamins",
+      "aliases": ["fe", "serum fe"],
+      "typicalUnits": ["mcg/dL", "umol/L"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_crp",
+    "text": "C-Reactive Protein (CRP) is a protein made by the liver that increases when there is inflammation in the body. Normal range: below 3.0 mg/L (though below 1.0 is ideal for heart health). High CRP indicates an active 'fire' in the body, which could be an infection, an autoimmune flare-up (like RA), or even a recent injury. A 'High Sensitivity' CRP (hs-CRP) is used to assess heart disease risk. Red flag: a level above 10.0 mg/L usually indicates a significant acute infection or serious inflammatory condition. CRP doesn't tell you WHERE the inflammation is, just that it's there. Next steps involve more specific tests to find the cause. Consult your doctor for interpretation. This summary is educational and not diagnostic.",
+    "metadata": {
+      "testKey": "crp",
+      "testName": "C-Reactive Protein",
+      "category": "InfectionMarkers",
+      "aliases": ["crp", "c-reactive protein", "inflammation marker"],
+      "typicalUnits": ["mg/L", "mg/dL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_procalcitonin",
+    "text": "Procalcitonin is a marker used to help detect severe bacterial infections, such as sepsis or bacterial pneumonia. Normal range: below 0.1 ng/mL. High levels strongly suggest a bacterial infection, while low levels suggest a viral infection or no infection. This test helps doctors decide if antibiotics are necessary. Red flag: level above 0.5 ng/mL suggests a high risk of systemic bacterial infection; above 2.0 ng/mL suggests sepsis. This is usually an 'in-patient' or emergency room test. If high, immediate antibiotic therapy is often required. Consult a medical professional for diagnosis. This resource is for information only.",
+    "metadata": {
+      "testKey": "procalcitonin",
+      "testName": "Procalcitonin",
+      "category": "InfectionMarkers",
+      "aliases": ["pct"],
+      "typicalUnits": ["ng/mL"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_dengue_ns1",
+    "text": "Dengue NS1 Antigen is a test used to detect the dengue virus early in the course of the illness, typically during the first 1 to 7 days of symptoms. A 'Positive' result confirms an active Dengue infection. A 'Negative' result does not fully rule it out if tested too late. Dengue is a mosquito-borne illness that causes high fever and severe body aches. Red flag: a positive NS1 with a rapidly dropping platelet count (below 100,000) requires close monitoring for Dengue Hemorrhagic Fever. Next steps include staying hydrated, taking paracetamol (avoid aspirin/ibuprofen), and monitoring for warning signs like severe abdominal pain or bleeding. Consult a doctor immediately if you suspect dengue. This is an educational guide.",
+    "metadata": {
+      "testKey": "dengue_ns1",
+      "testName": "Dengue NS1 Antigen",
+      "category": "InfectionMarkers",
+      "aliases": ["dengue antigen", "ns1"],
+      "typicalUnits": ["N/A"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_dengue_igm",
+    "text": "Dengue IgM is an antibody test used to detect a recent Dengue infection. These antibodies usually appear 4 to 5 days after the fever starts. A 'Positive' result indicates a recent or current infection. A 'Negative' result early in the illness may be followed by a repeat test later. Like the NS1 test, it helps confirm the cause of a high fever. Red flag: positive IgM with signs of bleeding or low platelets. If positive, focus on rest and hydration. Avoid mosquito bites to prevent further spread. Always consult a healthcare professional for management of dengue fever. This information is for educational purposes.",
+    "metadata": {
+      "testKey": "dengue_igm",
+      "testName": "Dengue IgM Antibody",
+      "category": "InfectionMarkers",
+      "aliases": ["dengue igm"],
+      "typicalUnits": ["N/A"],
+      "sourceType": "trusted_medical_reference"
+    }
+  },
+  {
+    "id": "lab_malaria_antigen",
+    "text": "The Malaria Antigen test (Rapid Diagnostic Test) detects proteins from the malaria parasite in your blood. A 'Positive' result indicates an active malaria infection, usually P. falciparum or P. vivax. Symptoms include cyclic fevers, chills, and sweats. Malaria is a medical emergency and must be treated quickly to prevent complications like organ failure. Red flag: a positive result in someone with confusion, severe anemia, or inability to keep food down. Next steps involve immediate anti-malarial medication prescribed by a doctor. A 'Negative' result may still require a 'Blood Smear' for confirmation if symptoms are strong. Consult a doctor immediately for diagnosis and treatment. This is an educational resource.",
+    "metadata": {
+      "testKey": "malaria_antigen",
+      "testName": "Malaria Antigen (RDT)",
+      "category": "InfectionMarkers",
+      "aliases": ["malaria rdt", "malaria test"],
+      "typicalUnits": ["N/A"],
+      "sourceType": "trusted_medical_reference"
+    }
+  }
+]

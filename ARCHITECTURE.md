@@ -18,16 +18,19 @@ graph TD
     subgraph Backend Layers
         Auth[Auth & Security]
         Query[Query Service]
+        RAG[RAG Router & Service]
         LLM[LLM Reasoning]
         Storage[Storage Layer]
     end
     
     Backend <--> Auth
     Backend <--> Query
+    Backend <--> RAG
     Backend <--> LLM
     Backend <--> Storage
     
     LLM <--> Groq[Groq Llama-3 API]
+    RAG <--> Pinecone[(Pinecone - Vector DB)]
     Storage <--> PostgreSQL[(PostgreSQL - Profiles)]
     Storage <--> MongoDB[(MongoDB - History)]
 ```
@@ -115,15 +118,27 @@ The system is refactored into distinct layers to ensure separation of concerns, 
   - Future state: Summarization and vector search (RAG) for long-term recall.
 
 ### 2.4 Reasoning Layer (The Brain)
-- **Responsibility:** Synthesizes inputs, profile, and history to generate insights.
+- **Responsibility:** Synthesizes inputs, profile, history, and retrieved medical knowledge to generate insights.
 - **Components:**
   - `llm_service.py` (Groq/Llama-3 integration)
+  - `rag_router.py` (Intent-based routing)
+  - `rag_service.py` (Pinecone vector search)
 - **Key Features:**
-  - **Context Injection:** Merges Current Symptoms + Profile + History.
-  - **Structured Output:** Enforces a strict JSON schema (see Section 3).
+  - **Intent-Based RAG:** Routes queries to specific datasets (MedlinePlus, WHO, ICD-11) based on user intent.
+  - **Context Injection:** Merges Current Symptoms + Profile + History + RAG Medical Data.
+  - **Structured Output:** Enforces a strict JSON schema with mandatory `health_information` for condition explanations.
   - **Escalation Logic:** Checks history for worsening trends before generating advice.
 
-### 2.5 Safety Layer (Guardrails)
+### 2.5 RAG Routing & Medical Knowledge
+- **Responsibility:** Provides evidence-based medical information for clinical context.
+- **Logic:**
+  1. **Intent Detection:** Classifies queries (Disease, Symptom, Drug, Lab Report) with strict priority.
+  2. **Query Augmentation:** Expands user queries with clinical keywords (e.g., "causes", "management").
+  3. **Vector Retrieval:** Performs semantic search in Pinecone using `all-mpnet-base-v2` embeddings.
+  4. **Source Priority:** Ranks results from trusted sources like MedlinePlus and WHO.
+  5. **Symptom Shortcut:** Bypasses vector search for common symptoms (e.g., "fever", "nausea") using optimized fallback logic.
+
+### 2.6 Safety Layer (Guardrails)
 - **Responsibility:** Intercepts inputs and outputs to prevent harm.
 - **Components:**
   - `guardrails.py` (Mock/Rule-based)
@@ -132,7 +147,7 @@ The system is refactored into distinct layers to ensure separation of concerns, 
   - Force "EMERGENCY" severity if keywords (e.g., "chest pain", "suicide") are detected.
   - Append mandatory disclaimers to all outputs.
 
-### 2.6 Output Layer
+### 2.7 Output Layer
 - **Responsibility:** Presents data to the user in a human-readable and explainable format.
 - **Components:**
   - React UI (`ReportCard.jsx`)
@@ -140,9 +155,10 @@ The system is refactored into distinct layers to ensure separation of concerns, 
 - **Features:**
   - Visual Severity Badges.
   - "Why this advice?" (XAI Panel).
+  - Condition Explanations (RAG-backed).
   - Downloadable PDF reports.
 
-### 2.7 Measurement & Evaluation Layer
+### 2.8 Measurement & Evaluation Layer
 - **Responsibility:** Tracks system performance and user satisfaction to enable data-driven improvements.
 - **Components:**
   - `feedback_router.py` (API for user ratings)
@@ -162,6 +178,7 @@ To adhere to Responsible AI principles, every response includes metadata about t
 ```json
 {
   "summary": "Brief health summary...",
+  "health_information": "Detailed RAG-backed condition explanation...",
   "possible_causes": ["Cause A", "Cause B"],
   "risk_assessment": {
     "severity": "LOW" | "MEDIUM" | "HIGH" | "EMERGENCY",
@@ -182,24 +199,21 @@ To adhere to Responsible AI principles, every response includes metadata about t
 }
 ```
 
-### Low Confidence Handling
-- If `confidence_score` < 0.5: The UI displays a warning: "The AI is uncertain. Please provide more details."
-- If `severity` == "EMERGENCY": The UI blocks the chat and shows emergency contact numbers.
-
 ---
 
 ## 4. Explainable AI (XAI)
-We treat the LLM as a "Glass Box" where possible. The `explanation` field in the response is exposed to the user via an "Analysis Panel" in the UI. This answers:
+We treat the LLM as a "Glass Box" where possible. The `explanation` and `health_information` fields in the response are exposed to the user via an "Analysis Panel" in the UI. This answers:
 1. **Why this severity?** (e.g., "Symptoms have persisted for >3 days")
-2. **Why this advice?** (e.g., "Based on your high BMI, we recommend...")
+2. **What is this condition?** (Evidence-based data from RAG)
+3. **Why this advice?** (e.g., "Based on your high BMI, we recommend...")
 
 ---
 
 ## 5. Trade-offs & Engineering Decisions
 
-### 5.1 Why LLM-only (No RAG yet)?
-- **Decision:** Use Llama-3 70B with large context window instead of a Vector DB (Pinecone).
-- **Reasoning:** For a single-user session history (< 50 messages), the context window is sufficient and lower latency than RAG. RAG introduces retrieval complexity and potential for "lost in the middle" errors for recent context.
+### 5.1 Why RAG + Vector DB (Pinecone)?
+- **Decision:** Transitioned from LLM-only to a hybrid RAG architecture using Pinecone and MedlinePlus/WHO datasets.
+- **Reasoning:** While Llama-3 has a large context window, medical knowledge requires "ground truth" citations. RAG reduces hallucinations by providing the LLM with relevant, verified medical snippets from trusted sources before generation.
 
 ### 5.2 Why MongoDB for History?
 - **Decision:** Store full conversation trees in NoSQL.

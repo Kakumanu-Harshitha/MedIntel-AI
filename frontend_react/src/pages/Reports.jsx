@@ -19,7 +19,7 @@ const Reports = () => {
                 const parsed = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
                 
                 // Return structured report with metadata
-                return { ...parsed, report_id: msg.report_id, created_at: msg.timestamp };
+                return { ...parsed, report_id: msg.report_id, created_at: msg.timestamp, patient_name: msg.patient_name };
             } catch (e) {
                 return null;
             }

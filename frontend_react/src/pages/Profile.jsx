@@ -10,6 +10,7 @@ import { clsx } from 'clsx';
 
 const Profile = () => {
   const [profile, setProfile] = useState({
+    patient_name: '',
     age: '',
     gender: 'Prefer not to say',
     weight_kg: '',
@@ -203,6 +204,22 @@ const Profile = () => {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
+                {/* Patient Name */}
+                <div className="sm:col-span-2 space-y-2.5">
+                  <label className="block text-xs font-bold text-navy-400 uppercase tracking-widest ml-1">Name</label>
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      name="patient_name"
+                      value={profile.patient_name}
+                      onChange={handleChange}
+                      className="w-full pl-12 pr-4 py-4 bg-navy-50/50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all text-navy-900 font-semibold placeholder:text-navy-200"
+                      placeholder="e.g. John Doe"
+                    />
+                    <User className="absolute left-4 top-4 h-5 w-5 text-navy-300 group-focus-within:text-brand-500 transition-colors" />
+                  </div>
+                </div>
+
                 {/* Age */}
                 <div className="space-y-2.5">
                   <label className="block text-xs font-bold text-navy-400 uppercase tracking-widest ml-1">Current Age</label>

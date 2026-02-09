@@ -9,31 +9,23 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchHistory = async () => {
+    const fetchReports = async () => {
       try {
-        const data = await dashboardService.getHistory();
-        // Filter for assistant messages that are valid JSON reports
-        const reports = data.filter(msg => msg.role === 'assistant').map(msg => {
+        const data = await dashboardService.getReports();
+        // The API now returns only eligible reports, but we still need to parse content
+        const reports = data.map(msg => {
             try {
-                const parsed = JSON.parse(msg.content);
+                // Check if content is already an object or needs parsing
+                const parsed = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
                 
-                // Identify report types based on schema
-                const isHealthReport = parsed.type === 'health_report' || !!parsed.health_information;
-                const isMedicalAnalysis = parsed.type === 'medical_report_analysis' || !!parsed.test_analysis;
-                const isLegacyMedical = parsed.input_type === 'medical_report' || !!parsed.interpretation;
-                const isImageAnalysis = parsed.input_type === 'medical_image' || !!parsed.observations;
-                const isGeneralReport = !!parsed.summary && (!!parsed.severity || !!parsed.risk_assessment);
-
-                if (isHealthReport || isMedicalAnalysis || isLegacyMedical || isImageAnalysis || isGeneralReport) {
-                    return parsed;
-                }
-                return null;
+                // Return structured report with metadata
+                return { ...parsed, report_id: msg.report_id, created_at: msg.timestamp };
             } catch (e) {
                 return null;
             }
         }).filter(Boolean);
         
-        // We might want to reverse to show newest first if the API doesn't
+        // Show newest first
         setHistory(reports.reverse());
       } catch (error) {
         console.error("Failed to fetch reports:", error);
@@ -42,7 +34,7 @@ const Reports = () => {
       }
     };
 
-    fetchHistory();
+    fetchReports();
   }, []);
 
   return (
@@ -104,7 +96,11 @@ const Reports = () => {
                     </div>
                 </div>
                 <div className="transition-all duration-300 hover:translate-x-1">
-                    <ReportCard data={report} />
+                    <ReportCard 
+                        report={report} 
+                        reportId={report.report_id} 
+                        hideHeader={true} 
+                    />
                 </div>
               </div>
             ))}

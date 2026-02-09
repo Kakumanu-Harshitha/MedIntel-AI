@@ -15,6 +15,51 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor for handling 401s
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If error is 401 and we haven't tried refreshing yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (refreshToken) {
+        try {
+          // Use axios directly to avoid the interceptor loop
+          const response = await axios.post(`${API_URL}/auth/refresh`, { 
+            refresh_token: refreshToken 
+          });
+          
+          const { access_token, refresh_token: newRefreshToken } = response.data;
+          
+          localStorage.setItem('token', access_token);
+          if (newRefreshToken) {
+            localStorage.setItem('refreshToken', newRefreshToken);
+          }
+          
+          // Update the original request header and retry
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          return axios(originalRequest);
+        } catch (refreshError) {
+          // If refresh fails, logout and redirect
+          authService.logout();
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      } else {
+        // No refresh token, logout and redirect
+        authService.logout();
+        window.location.href = '/login';
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 export const authService = {
   login: async (email, password) => {
     const formData = new URLSearchParams();
@@ -29,7 +74,13 @@ export const authService = {
   },
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('email');
+    localStorage.removeItem('role');
+  },
+  refresh: async (refreshToken) => {
+    const response = await api.post('/auth/refresh', { refresh_token: refreshToken });
+    return response.data;
   },
   forgotPassword: async (email) => {
     const response = await api.post('/auth/forgot-password', { email });
@@ -83,23 +134,67 @@ export const dashboardService = {
     const response = await api.get('/dashboard/history');
     return response.data;
   },
+  getReports: async () => {
+    const response = await api.get('/dashboard/reports');
+    return response.data;
+  },
   clearHistory: async () => {
     const response = await api.delete('/dashboard/history');
     return response.data;
   },
-  getReportPdf: async (email) => {
-    const response = await api.get(`/report/user/${email}`, {
+  getReportPdf: async (email, reportId = null) => {
+    const url = reportId 
+      ? `/report/user/${email}?report_id=${reportId}` 
+      : `/report/user/${email}`;
+    const response = await api.get(url, {
       responseType: 'blob',
     });
     return response.data;
   }
 };
 
+export const ownerService = {
+  getHealthMetrics: async () => {
+    const response = await api.get('/owner/health-metrics');
+    return response.data;
+  },
+  getSatisfactionMetrics: async () => {
+    const response = await api.get('/owner/satisfaction-metrics');
+    return response.data;
+  },
+  getModelMetrics: async () => {
+    const response = await api.get('/owner/model-metrics');
+    return response.data;
+  },
+  getSecurityMetrics: async () => {
+    const response = await api.get('/owner/security-metrics');
+    return response.data;
+  },
+  getHitlMetrics: async () => {
+    const response = await api.get('/owner/hitl-metrics');
+    return response.data;
+  },
+  getAuditLogs: async (params = {}) => {
+    const response = await api.get('/owner/audit-logs', { params });
+    return response.data;
+  },
+  getToggles: async () => {
+    const response = await api.get('/owner/toggles');
+    return response.data;
+  },
+  updateToggle: async (key, value) => {
+    const response = await api.post(`/owner/toggles?key=${key}&value=${value}`);
+    return response.data;
+  }
+};
+
 export const feedbackService = {
-  submitFeedback: async (rating, context) => {
+  submitFeedback: async (rating, context, reportId = null, comment = null) => {
     const response = await api.post('/feedback/', {
       rating,
-      context
+      context,
+      report_id: reportId,
+      comment: comment
     });
     return response.data;
   }

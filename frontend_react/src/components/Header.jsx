@@ -10,6 +10,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileWarning, setProfileWarning] = useState(false);
   const email = localStorage.getItem('email');
+  const role = localStorage.getItem('role');
   const isLoggedIn = !!email;
   const username = email ? email.split('@')[0] : '';
 
@@ -29,6 +30,7 @@ const Header = () => {
 
   const handleLogout = () => {
     authService.logout();
+    localStorage.removeItem('role');
     navigate('/login');
     setIsMenuOpen(false);
   };
@@ -38,6 +40,10 @@ const Header = () => {
     { name: 'Reports', path: '/reports', icon: FileText },
     { name: 'Profile', path: '/profile', icon: User, warning: profileWarning },
   ];
+
+  if (role === 'OWNER') {
+    navItems.push({ name: 'Admin', path: '/owner', icon: ShieldCheck });
+  }
 
   return (
     <header className="border-b border-navy-100 bg-white/70 backdrop-blur-xl sticky top-0 z-50 font-sans">

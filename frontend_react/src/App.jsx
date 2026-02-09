@@ -1,11 +1,13 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports';
 import ResetPassword from './pages/ResetPassword';
+import OwnerDash from './pages/OwnerDash';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -15,9 +17,25 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const OwnerRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const userRole = localStorage.getItem('role'); // We should store role on login
+  
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (userRole !== 'OWNER') {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
+
 function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Toaster position="top-center" reverseOrder={false} />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -52,6 +70,16 @@ function App() {
             <ProtectedRoute>
               <Profile />
             </ProtectedRoute>
+          }
+        />
+
+        {/* Owner Dashboard Route */}
+        <Route
+          path="/owner"
+          element={
+            <OwnerRoute>
+              <OwnerDash />
+            </OwnerRoute>
           }
         />
 

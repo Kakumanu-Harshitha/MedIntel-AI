@@ -22,12 +22,16 @@ const Login = () => {
       if (view === 'login') {
         const data = await authService.login(email, password);
         localStorage.setItem('token', data.access_token);
+        localStorage.setItem('refreshToken', data.refresh_token);
         localStorage.setItem('email', data.email);
-        navigate('/chat');
+        localStorage.setItem('role', data.role);
+        navigate(data.role === 'OWNER' ? '/owner' : '/chat');
       } else if (view === 'signup') {
         const data = await authService.signup(email, password);
         localStorage.setItem('token', data.access_token);
+        localStorage.setItem('refreshToken', data.refresh_token);
         localStorage.setItem('email', data.email);
+        localStorage.setItem('role', data.role);
         navigate('/chat');
       } else if (view === 'forgot') {
         await authService.forgotPassword(email);

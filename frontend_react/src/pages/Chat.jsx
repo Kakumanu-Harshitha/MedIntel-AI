@@ -55,7 +55,8 @@ const Chat = () => {
       const aiMsg = {
         role: 'assistant',
         content: response.text_response,
-        audio_url: response.audio_url
+        audio_url: response.audio_url,
+        report_id: response.report_id
       };
       setHistory(prev => [...prev, aiMsg]);
     } catch (error) {
@@ -166,7 +167,14 @@ const Chat = () => {
                     </div>
                   ) : (
                     <div className="w-full max-w-[95%]">
-                      <ReportCard data={msg.content} audioUrl={msg.audio_url} />
+                      <ReportCard 
+                        data={typeof msg.content === 'string' && msg.content.startsWith('{') 
+                          ? JSON.stringify({ ...JSON.parse(msg.content), isLatest: idx === history.length - 1 })
+                          : msg.content
+                        } 
+                        audioUrl={msg.audio_url} 
+                        reportId={msg.report_id} 
+                      />
                     </div>
                   )}
                 </div>

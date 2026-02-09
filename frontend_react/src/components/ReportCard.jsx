@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2, AlertOctagon, Info, Stethoscope, Utensils, Activity, Download, FileText, Brain, ShieldCheck, ThumbsUp, ThumbsDown, HelpCircle, Volume2, User as UserIcon, Image as ImageIcon, AlertCircle, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
+import toast from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
 import { dashboardService, feedbackService } from '../services/api';
+import FeedbackModal from './FeedbackModal';
 
 const SeverityBadge = ({ level }) => {
   const configs = {
@@ -58,20 +61,127 @@ const ConfidenceBar = ({ score, reason }) => {
   );
 };
 
-const ReportCard = ({ data, audioUrl }) => {
+const FeedbackSection = ({ feedbackGiven, onFeedback, onNegativeClick }) => {
+  if (feedbackGiven) {
+    return (
+      <div className="px-6 py-3 bg-navy-50/20 flex items-center justify-end gap-3 border-t border-navy-50/50 animate-fade-in">
+        <div className="flex items-center gap-2 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Thank you for your feedback!
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-6 py-3 bg-navy-50/20 border-t border-navy-50/50">
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-[9px] font-black text-navy-400 uppercase tracking-widest">Helpful?</span>
+        <div className="flex items-center gap-2">
+          <button 
+              onClick={() => onFeedback('positive')}
+              className="p-2 rounded-lg transition-all border shadow-sm active:scale-90 bg-white text-navy-400 hover:text-emerald-500 hover:border-emerald-200"
+          >
+              <ThumbsUp className="h-3.5 w-3.5" />
+          </button>
+          <button 
+              onClick={onNegativeClick}
+              className="p-2 rounded-lg transition-all border shadow-sm active:scale-90 bg-white text-navy-400 hover:text-rose-500 hover:border-rose-200"
+          >
+              <ThumbsDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
   const [downloading, setDownloading] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
+  
+  // Safe Parsing
+  const initialData = reportProp || data;
+  let report = initialData;
+  
+  // If initialData is a message object from MongoDB (has content field)
+  if (initialData && typeof initialData === 'object' && 'content' in initialData) {
+    const content = initialData.content;
+    if (typeof content === 'string') {
+      try {
+        report = JSON.parse(content);
+      } catch (e) {
+        report = content;
+      }
+    } else {
+      report = content;
+    }
+    // Carry over feedback_rating from the message object
+    if (initialData.feedback_rating && typeof report === 'object') {
+      report.feedback_rating = initialData.feedback_rating;
+    }
+  } else if (typeof initialData === 'string') {
+    try {
+      report = JSON.parse(initialData);
+    } catch (e) {
+      // If it's not JSON, we'll handle it as plain text later
+    }
+  }
+
+  // Initialize feedbackGiven from the report data (which now includes feedback_rating from backend)
   const [feedbackGiven, setFeedbackGiven] = useState(null);
 
-  const handleFeedback = async (rating) => {
+  useEffect(() => {
+    if (report?.feedback_rating) {
+      setFeedbackGiven(report.feedback_rating);
+    } else if (initialData?.feedback_rating) {
+      setFeedbackGiven(initialData.feedback_rating);
+    }
+  }, [report, initialData]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleFeedback = async (rating, comment = null) => {
     if (feedbackGiven) return;
     setFeedbackGiven(rating);
     try {
-        const context = typeof data === 'string' ? JSON.parse(data).summary : data.summary;
-        await feedbackService.submitFeedback(rating, context);
+        // Use the already parsed 'report' object for context
+        const context = typeof report === 'string' ? report : report?.summary || report?.health_information || "No summary available";
+        await feedbackService.submitFeedback(rating, context, reportId, comment);
+        
+        if (rating === 'positive') {
+          toast.success('Thank you for your valuable feedback!', {
+            style: {
+              borderRadius: '12px',
+              background: '#0F172A',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            },
+          });
+        } else {
+          toast.success('Thanks! Your feedback helps us improve.', {
+            style: {
+              borderRadius: '12px',
+              background: '#0F172A',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            },
+          });
+        }
     } catch (e) {
         console.error("Feedback error", e);
+        toast.error('Failed to submit feedback.');
     }
+  };
+
+  const handleNegativeSubmit = async (reason, text) => {
+    const fullComment = text ? `${reason}: ${text}` : reason;
+    await handleFeedback('negative', fullComment);
   };
 
   const handleDownload = async () => {
@@ -83,7 +193,7 @@ const ReportCard = ({ data, audioUrl }) => {
         return;
       }
       
-      const blob = await dashboardService.getReportPdf(email);
+      const blob = await dashboardService.getReportPdf(email, reportId);
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
@@ -99,18 +209,22 @@ const ReportCard = ({ data, audioUrl }) => {
     }
   };
 
-  // Safe Parsing
-  let report = data;
-  if (typeof data === 'string') {
-    try {
-      report = JSON.parse(data);
-    } catch (e) {
-      return (
-        <div className="bg-white rounded-3xl p-8 shadow-premium border border-navy-100 animate-fade-in">
-          <p className="text-navy-900 leading-relaxed font-medium">{data}</p>
-        </div>
-      );
-    }
+  // Handle Chat Message (Small Talk)
+  if (report?.type === 'chat_message') {
+    return (
+      <div className="bg-white rounded-3xl p-6 shadow-premium border border-navy-100 animate-fade-in max-w-xl prose prose-sm prose-navy">
+        <ReactMarkdown>{report.message}</ReactMarkdown>
+      </div>
+    );
+  }
+
+  // Handle plain text (if parsing failed and it's not a structured report)
+  if (typeof report === 'string') {
+    return (
+      <div className="bg-white rounded-3xl p-8 shadow-premium border border-navy-100 animate-fade-in prose prose-navy">
+        <ReactMarkdown>{report}</ReactMarkdown>
+      </div>
+    );
   }
 
   // Handle General Health Report (Symptom Analysis)
@@ -220,6 +334,18 @@ const ReportCard = ({ data, audioUrl }) => {
             )}
           </div>
         </div>
+
+        <FeedbackSection 
+          feedbackGiven={feedbackGiven} 
+          onFeedback={handleFeedback} 
+          onNegativeClick={() => setIsModalOpen(true)}
+        />
+
+        <FeedbackModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleNegativeSubmit} 
+        />
 
         <div className="px-5 py-3 bg-navy-50/30 border-t border-navy-100/40 flex items-start gap-3">
           <div className="p-1 bg-white rounded-md border border-navy-100/50 shadow-sm">
@@ -380,6 +506,18 @@ const ReportCard = ({ data, audioUrl }) => {
           </div>
         </div>
 
+        <FeedbackSection 
+          feedbackGiven={feedbackGiven} 
+          onFeedback={handleFeedback} 
+          onNegativeClick={() => setIsModalOpen(true)}
+        />
+
+        <FeedbackModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleNegativeSubmit} 
+        />
+
         <div className="px-5 py-3 bg-navy-50/30 border-t border-navy-100/40 flex items-start gap-3">
           <div className="p-1 bg-white rounded-md border border-navy-100/50 shadow-sm">
             <Info className="h-3.5 w-3.5 text-navy-400" />
@@ -480,6 +618,18 @@ const ReportCard = ({ data, audioUrl }) => {
           </div>
         </div>
 
+        <FeedbackSection 
+          feedbackGiven={feedbackGiven} 
+          onFeedback={handleFeedback} 
+          onNegativeClick={() => setIsModalOpen(true)}
+        />
+
+        <FeedbackModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleNegativeSubmit} 
+        />
+
         <div className="px-5 py-3 bg-navy-50/50 border-t border-navy-100 flex items-start gap-3">
           <Info className="h-3.5 w-3.5 text-navy-300 mt-0.5 shrink-0" />
           <p className="text-[9px] text-navy-400 leading-relaxed font-medium">{report.disclaimer}</p>
@@ -490,6 +640,8 @@ const ReportCard = ({ data, audioUrl }) => {
 
   // Handle Clarification Questions (Triage Mode)
   if (report?.type === 'clarification_questions') {
+    const isLatest = report.isLatest !== false;
+
     return (
       <div className="bg-gradient-to-br from-brand-600 to-navy-900 rounded-2xl p-5 shadow-premium border border-white/10 animate-slide-up relative overflow-hidden group max-w-xl">
          {/* Decorative elements - Scaled */}
@@ -514,7 +666,7 @@ const ReportCard = ({ data, audioUrl }) => {
                 <div className="flex items-center gap-2">
                   <span className="px-1.5 py-0.5 bg-white/20 text-white text-[7px] font-black uppercase rounded-md border border-white/10 backdrop-blur-sm tracking-widest">Triage Mode</span>
                   <span className="w-1 h-1 rounded-full bg-white/30" />
-                  <span className="text-[7px] font-bold text-white/60 uppercase tracking-widest">Pending</span>
+                  <span className="text-[7px] font-bold text-white/60 uppercase tracking-widest">{isLatest ? 'Pending' : 'Answered'}</span>
                 </div>
             </div>
          </div>
@@ -530,14 +682,16 @@ const ReportCard = ({ data, audioUrl }) => {
             ))}
          </div>
          
-         <div className="mt-5 flex items-center gap-3 px-1 relative z-10">
-            <div className="flex gap-1">
-              <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-              <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-              <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" />
+         {isLatest && (
+            <div className="mt-5 flex items-center gap-3 px-1 relative z-10">
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" />
+                </div>
+                <p className="text-[8px] text-white/50 font-black uppercase tracking-widest">Awaiting response</p>
             </div>
-            <p className="text-[8px] text-white/50 font-black uppercase tracking-widest">Awaiting response</p>
-         </div>
+         )}
       </div>
     );
   }
@@ -577,6 +731,18 @@ const ReportCard = ({ data, audioUrl }) => {
               </div>
             </div>
           </div>
+
+          <FeedbackSection 
+          feedbackGiven={feedbackGiven} 
+          onFeedback={handleFeedback} 
+          onNegativeClick={() => setIsModalOpen(true)}
+        />
+
+        <FeedbackModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleNegativeSubmit} 
+        />
 
           <div className="px-5 py-4 bg-orange-50/30 border-t border-orange-100/40 flex items-start gap-4">
             <div className="p-1.5 bg-white rounded-lg border border-orange-100/50 shadow-sm">
@@ -676,6 +842,18 @@ const ReportCard = ({ data, audioUrl }) => {
           </div>
         </div>
 
+        <FeedbackSection 
+          feedbackGiven={feedbackGiven} 
+          onFeedback={handleFeedback} 
+          onNegativeClick={() => setIsModalOpen(true)}
+        />
+
+        <FeedbackModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleNegativeSubmit} 
+        />
+
         <div className="px-5 py-4 bg-navy-50/30 border-t border-navy-100/40 flex items-start gap-4">
           <div className="p-1.5 bg-white rounded-lg border border-navy-100/50 shadow-sm">
             <Info className="h-4 w-4 text-navy-400" />
@@ -689,20 +867,38 @@ const ReportCard = ({ data, audioUrl }) => {
   }
 
   // Handle Legacy or Error Formats
-  if (!report || !report.summary) {
+  const mainContent = report?.summary || report?.health_information || report?.interpretation || report?.message || report?.context || report?.analysis || report?.reasoning_brief;
+  
+  if (!report || !mainContent) {
     return (
-      <div className="bg-white rounded-[2rem] p-8 shadow-premium border border-navy-100/60 animate-fade-in flex items-center gap-6">
-        <div className="p-4 bg-navy-50 rounded-2xl text-navy-400">
+      <div className="bg-white rounded-[2rem] p-8 shadow-premium border border-navy-100/60 animate-fade-in flex flex-col md:flex-row items-start md:items-center gap-6 prose prose-navy max-w-none">
+        <div className="p-4 bg-navy-50 rounded-2xl text-navy-400 shrink-0">
           <Info className="h-6 w-6" />
         </div>
-        <p className="text-navy-900 leading-relaxed font-bold text-lg italic">
-          "{typeof report === 'string' ? report : "Unable to process assessment details."}"
-        </p>
+        <div className="flex-1">
+          <ReactMarkdown>
+            {typeof report === 'string' ? report : "Report data is being processed or contains no summary."}
+          </ReactMarkdown>
+        </div>
+        <div className="ml-auto shrink-0 pt-4 md:pt-0">
+          <FeedbackSection 
+            feedbackGiven={feedbackGiven} 
+            onFeedback={handleFeedback} 
+            onNegativeClick={() => setIsModalOpen(true)}
+          />
+        </div>
+
+        <FeedbackModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleNegativeSubmit} 
+        />
       </div>
     );
   }
 
   // Normalize Data Structure (Backwards Compatibility)
+  const reportSummary = mainContent;
   const severity = report.risk_assessment?.severity || report.severity || "UNKNOWN";
   const confidence = report.risk_assessment?.confidence_score || 0.0;
   const uncertainty = report.risk_assessment?.uncertainty_reason;
@@ -759,7 +955,7 @@ const ReportCard = ({ data, audioUrl }) => {
         <div className="space-y-3">
           <div className="relative">
             <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
-            <p className="text-navy-800 text-xs leading-relaxed font-semibold italic">"{report.summary}"</p>
+            <p className="text-navy-800 text-xs leading-relaxed font-semibold italic">"{reportSummary}"</p>
           </div>
           {confidence > 0 && <ConfidenceBar score={confidence} reason={uncertainty} />}
         </div>
@@ -946,32 +1142,17 @@ const ReportCard = ({ data, audioUrl }) => {
         </div>
       </div>
 
-      {/* Feedback Section */}
-      <div className="px-6 py-3 bg-navy-50/20 flex items-center justify-end gap-3 border-t border-navy-50/50">
-        <span className="text-[9px] font-black text-navy-400 uppercase tracking-widest">Helpful?</span>
-        <div className="flex items-center gap-2">
-          <button 
-              onClick={() => handleFeedback('positive')}
-              disabled={feedbackGiven}
-              className={clsx(
-                "p-2 rounded-lg transition-all border shadow-sm active:scale-90",
-                feedbackGiven === 'positive' ? "bg-emerald-500 text-white border-emerald-500" : "bg-white text-navy-400 hover:text-emerald-500 hover:border-emerald-200"
-              )}
-          >
-              <ThumbsUp className="h-3.5 w-3.5" />
-          </button>
-          <button 
-              onClick={() => handleFeedback('negative')}
-              disabled={feedbackGiven}
-              className={clsx(
-                "p-2 rounded-lg transition-all border shadow-sm active:scale-90",
-                feedbackGiven === 'negative' ? "bg-rose-500 text-white border-rose-500" : "bg-white text-navy-400 hover:text-rose-500 hover:border-rose-200"
-              )}
-          >
-              <ThumbsDown className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
+      <FeedbackSection 
+        feedbackGiven={feedbackGiven} 
+        onFeedback={handleFeedback} 
+        onNegativeClick={() => setIsModalOpen(true)}
+      />
+
+      <FeedbackModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSubmit={handleNegativeSubmit} 
+      />
 
       {/* Disclaimer Footer */}
       <div className="px-6 py-4 bg-navy-50/30 flex items-start gap-4">

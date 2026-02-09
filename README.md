@@ -42,9 +42,20 @@ This project demonstrates real-world skills in:
 - **Profile Management:** Stores clinical metadata (Age, BMI, Conditions) in PostgreSQL for personalized context.
 - **Encrypted History:** Conversation memory stored in MongoDB Atlas for long-term pattern recognition.
 
-### 📄 Clinical Reporting
+### 📄 Clinical Reporting & Management
 - **PDF Generation:** Download high-quality, clinical-grade health reports with professional branding and risk badges.
 - **Responsive Dashboard:** View and manage previous assessments and health metrics.
+- **Owner Dashboard:** A centralized control panel for system administrators to monitor real-time health metrics, user engagement, and security.
+
+### 📊 System Monitoring (Owner Dashboard)
+- **Health Metrics:** Real-time tracking of total users, active sessions (daily/weekly), query volume, and system error rates.
+- **User Satisfaction (Feedback System):**
+  - **Direct Feedback:** Users can rate AI reports as "Helpful" or "Not Helpful".
+  - **Reason Analysis:** Captures qualitative data on why a report was not helpful (e.g., "Too vague", "Inaccurate").
+  - **Confidence Correlation:** Analyzes the relationship between AI confidence scores and actual user satisfaction.
+- **HITL (Human-in-the-Loop) Monitoring:** Tracks automatic escalations to medical specialists for high-risk or ambiguous queries.
+- **Security Analytics:** Monitors failed login attempts, password resets, and suspicious activity spikes to prevent unauthorized access.
+- **Model Transparency:** Tracks which LLM models (e.g., Llama-3, GPT-4) are being utilized for specific user intents.
 
 ---
 

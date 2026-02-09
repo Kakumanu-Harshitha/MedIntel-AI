@@ -415,38 +415,38 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
             </button>
           </div>
           
-          <div className="space-y-3">
-            <div className="relative">
-              <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
-              <p className="text-navy-700 text-sm leading-relaxed font-semibold">{report.summary}</p>
-            </div>
-            
-            {report.health_information && (
-              <div className="relative mt-3 pt-3 border-t border-navy-50/50">
-                <div className="absolute -left-3 top-3 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
-                <div className="text-navy-800 text-[11px] leading-relaxed font-semibold italic prose prose-sm prose-navy max-w-none">
-                  <ReactMarkdown>{report.health_information}</ReactMarkdown>
-                </div>
+            <div className="space-y-3">
+              <div className="relative">
+                <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
+                <p className="text-navy-700 text-sm leading-relaxed font-semibold">{report.summary}</p>
               </div>
-            )}
-            
-            {report.summary?.includes("seek medical attention") && (
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3 animate-pulse-soft shadow-sm shadow-rose-500/10">
-                <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
-                  <AlertOctagon className="h-4 w-4" />
+              
+              {report.health_information && (
+                <div className="relative mt-3 pt-3 border-t border-navy-50/50">
+                  <div className="absolute -left-3 top-3 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
+                  <div className="text-navy-800 text-[11px] leading-relaxed font-semibold italic prose prose-sm prose-navy max-w-none">
+                    <ReactMarkdown>{report.health_information}</ReactMarkdown>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-rose-900 font-black text-[10px] uppercase tracking-wider mb-1">Critical Alert</h4>
-                  <p className="text-rose-700 text-[11px] font-bold leading-relaxed">
-                    Some values are significantly outside the normal range. Consult a professional.
-                  </p>
-                </div>
-              </div>
-            )}
+              )}
 
-            {report.ai_confidence && <ConfidenceBar score={report.ai_confidence} />}
+              {report.summary?.includes("seek medical attention") && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3 animate-pulse-soft shadow-sm shadow-rose-500/10">
+                  <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
+                    <AlertOctagon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-rose-900 font-black text-[10px] uppercase tracking-wider mb-1">Critical Alert</h4>
+                    <p className="text-rose-700 text-[11px] font-bold leading-relaxed">
+                      Some values are significantly outside the normal range. Consult a professional.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {report.ai_confidence && <ConfidenceBar score={report.ai_confidence} />}
+            </div>
           </div>
-        </div>
 
         <div className="p-5">
           <h4 className="text-[9px] font-black text-navy-400 uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
@@ -846,25 +846,13 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
             ))}
           </div>
 
-          <div className="space-y-3">
-            <div className="relative">
-              <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-teal-500 rounded-full opacity-50" />
-              <p className="text-navy-800 text-[11px] leading-relaxed font-semibold italic">"{report.health_information || report.summary}"</p>
-            </div>
-            {report.confidence_level && (
-              <div className="flex items-center gap-2">
-                <span className="text-[8px] font-bold text-navy-400 uppercase tracking-widest">AI Confidence</span>
-                <span className={clsx(
-                  "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
-                  report.confidence_level.toLowerCase().includes('high') ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                  report.confidence_level.toLowerCase().includes('medium') ? "bg-amber-50 text-amber-700 border-amber-100" :
-                  "bg-orange-50 text-orange-700 border-orange-100"
-                )}>
-                  {report.confidence_level}
-                </span>
+            <div className="space-y-3">
+              <div className="relative">
+                <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-teal-500 rounded-full opacity-50" />
+                <p className="text-navy-800 text-[11px] leading-relaxed font-semibold italic">"{report.health_information || report.summary}"</p>
               </div>
-            )}
-          </div>
+              {report.confidence_level && <ConfidenceBar score={report.confidence_level} />}
+            </div>
         </div>
 
         <div className="p-5 space-y-6">

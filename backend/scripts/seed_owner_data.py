@@ -6,8 +6,8 @@ import random
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 
-# Add the project root to sys.path so we can import backend modules
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Updated path to reach project root from backend/scripts/
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from backend.database import SessionLocal, engine, Base
 from backend.models import User, UserFeedback, AuditLog, SystemConfig

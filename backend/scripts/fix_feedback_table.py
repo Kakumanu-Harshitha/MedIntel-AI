@@ -3,8 +3,8 @@ import sys
 import os
 from sqlalchemy import text
 
-# Add the project root to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Updated path to reach project root from backend/scripts/
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from backend.database import engine
 

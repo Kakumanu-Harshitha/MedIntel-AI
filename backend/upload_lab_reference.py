@@ -20,7 +20,10 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX", "health-assistant-medical-knowledge")
 NAMESPACE = "lab_reference"
 EMBEDDING_MODEL_NAME = 'all-mpnet-base-v2'
-DATASET_PATH = "lab_reference_dataset.json"
+
+# Updated path to look in the same directory (backend/)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATASET_PATH = os.path.join(BASE_DIR, "lab_reference_dataset.json")
 
 def get_embeddings(texts: List[str], model: SentenceTransformer) -> List[List[float]]:
     """Generates embeddings for a list of texts using sentence-transformers."""

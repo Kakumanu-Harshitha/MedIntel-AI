@@ -7,22 +7,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = (
-    f"postgresql://{os.getenv('DATABASE_USERNAME')}:"
-    f"{os.getenv('DATABASE_PASSWORD')}@"
-    f"{os.getenv('DATABASE_HOSTNAME')}:"
-    f"{os.getenv('DATABASE_PORT')}/"
-    f"{os.getenv('DATABASE_NAME')}"
-)
+# Database Configuration
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not all([
-    os.getenv("DATABASE_USERNAME"),
-    os.getenv("DATABASE_PASSWORD"),
-    os.getenv("DATABASE_HOSTNAME"),
-    os.getenv("DATABASE_PORT"),
-    os.getenv("DATABASE_NAME"),
-]):
-    raise RuntimeError("❌ PostgreSQL environment variables are missing")
+if not DATABASE_URL:
+    DATABASE_URL = (
+        f"postgresql://{os.getenv('DATABASE_USERNAME')}:"
+        f"{os.getenv('DATABASE_PASSWORD')}@"
+        f"{os.getenv('DATABASE_HOSTNAME')}:"
+        f"{os.getenv('DATABASE_PORT')}/"
+        f"{os.getenv('DATABASE_NAME')}"
+    )
+
+# Fix for Render/Heroku which might use 'postgres://' instead of 'postgresql://'
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(
     DATABASE_URL,

@@ -7,8 +7,8 @@ from datetime import datetime
 from typing import Optional, Any, Dict
 from sqlalchemy.orm import Session
 from fastapi import Request
-from .models import AuditLog
-from .database import SessionLocal
+from models import AuditLog
+from database import SessionLocal
 
 class AuditLogger:
     @staticmethod

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
-from .auth import get_current_user
-from .models import User
-from . import mongo_memory, llm_service
-from .audit_logger import audit_logger
+from auth.router import get_current_user
+from models import User
+import mongo_memory, llm_service
+from audit_logger import audit_logger
 from pydantic import BaseModel
 from typing import Optional
 

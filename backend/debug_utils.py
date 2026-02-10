@@ -2,7 +2,7 @@ import traceback
 import os
 from datetime import datetime
 
-LOG_FILE = r"d:\Ai_health_assistant\backend_debug.log"
+LOG_FILE = "backend_debug.log"
 
 def log_debug_error(context: str, error: Exception):
     timestamp = datetime.now().isoformat()

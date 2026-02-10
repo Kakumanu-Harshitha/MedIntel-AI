@@ -6,12 +6,12 @@ from typing import Any
 from groq import AsyncGroq
 from dotenv import load_dotenv
 from fastapi import Request
-from .schemas import RiskAssessment, Explanation, Recommendations, HealthReport
-from . import mongo_memory
-from .rag_service import rag_service
-from .structured_memory import structured_memory
-from .rag_router import rag_router, QueryIntent, DatasetType
-from .audit_logger import audit_logger
+from schemas import RiskAssessment, Explanation, Recommendations, HealthReport
+import mongo_memory
+from rag_service import rag_service
+from structured_memory import structured_memory
+from rag_router import rag_router, QueryIntent, DatasetType
+from audit_logger import audit_logger
 
 load_dotenv()
 

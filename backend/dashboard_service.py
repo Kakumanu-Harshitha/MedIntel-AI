@@ -1,10 +1,10 @@
 # backend/dashboard_service.py
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
-from .mongo_memory import get_full_history_for_dashboard, get_reports_history, clear_user_memory
-from .auth import get_current_user
-from .models import User, AuditLog, Profile
-from .database import get_db
+from mongo_memory import get_full_history_for_dashboard, get_reports_history, clear_user_memory
+from auth.router import get_current_user
+from models import User, AuditLog, Profile
+from database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 

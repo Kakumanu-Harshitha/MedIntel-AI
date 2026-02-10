@@ -1,4 +1,4 @@
-from backend.rag_service import rag_service
+from rag_service import rag_service
 import uuid
 
 # Expanded Trusted Medical Data representing various gold-standard sources

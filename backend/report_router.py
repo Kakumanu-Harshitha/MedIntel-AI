@@ -8,11 +8,11 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from fpdf import FPDF
 
-from .auth import get_current_user
-from .models import User as SQLUser, Profile
-from .database import get_db
-from . import mongo_memory
-from .audit_logger import audit_logger
+from auth.router import get_current_user
+from models import User as SQLUser, Profile
+from database import get_db
+import mongo_memory
+from audit_logger import audit_logger
 
 router = APIRouter(prefix="/report", tags=["Report"])
 

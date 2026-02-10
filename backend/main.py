@@ -10,16 +10,16 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from .database import engine, Base
-from .auth import router as auth_router
-from .profile_router import router as profile_router
-from .report_router import router as report_router
-from .security_router import router as security_router
-from .feedback_router import router as feedback_router
-from .owner_router import router as owner_router
-from .audit_logger import audit_logger
-from . import query_service, dashboard_service, models, database
-from .debug_utils import log_debug_error
+from database import engine, Base
+from auth.router import router as auth_router
+from profile_router import router as profile_router
+from report_router import router as report_router
+from security_router import router as security_router
+from feedback_router import router as feedback_router
+from owner_router import router as owner_router
+from audit_logger import audit_logger
+import query_service, dashboard_service, models, database
+from debug_utils import log_debug_error
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)

@@ -8,15 +8,15 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 load_dotenv()
-from ..database import get_db
-from ..models import User, Profile
-from ..schemas import TokenOut, UserCreate, RefreshTokenIn, ForgotPasswordRequest, PasswordResetConfirm
-from ..audit_logger import audit_logger
-from ..email_service import email_service
-from ..models import PasswordResetToken
-from .jwt_handler import create_access_token, create_refresh_token, verify_token, SECRET_KEY, ALGORITHM
-from .user_auth import get_current_user
-from .oauth_config import oauth2_scheme
+from database import get_db
+from models import User, Profile
+from schemas import TokenOut, UserCreate, RefreshTokenIn, ForgotPasswordRequest, PasswordResetConfirm
+from audit_logger import audit_logger
+from email_service import email_service
+from models import PasswordResetToken
+from auth.jwt_handler import create_access_token, create_refresh_token, verify_token, SECRET_KEY, ALGORITHM
+from auth.user_auth import get_current_user
+from auth.oauth_config import oauth2_scheme
 import secrets
 import hashlib
 

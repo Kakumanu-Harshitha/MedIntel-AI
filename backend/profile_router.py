@@ -3,11 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import Optional
-from .database import get_db
-from .models import Profile, User as SQLUser  # for typing
-from .auth import get_current_user
-from .audit_logger import audit_logger
-from .schemas import ProfileIn, ProfileOut, TokenOut
+from database import get_db
+from models import Profile, User as SQLUser  # for typing
+from auth.router import get_current_user
+from audit_logger import audit_logger
+from schemas import ProfileIn, ProfileOut, TokenOut
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
@@ -51,7 +51,7 @@ async def create_or_update_profile(
 
     return profile  
 
-from .debug_utils import log_debug_error
+from debug_utils import log_debug_error
 
 @router.get("/", response_model=ProfileOut, response_model_exclude_none=True)
 def get_profile(

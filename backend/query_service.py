@@ -5,13 +5,13 @@ from PIL import Image
 import open_clip
 import torch
 from sqlalchemy.orm import Session
-from . import mongo_memory
-from . import llm_service
-from . import speech_service
-from .report_processor import report_processor
-from .auth import get_current_user
-from .models import User, Profile
-from .database import get_db
+import mongo_memory
+import llm_service
+import speech_service
+from report_processor import report_processor
+from auth.router import get_current_user
+from models import User, Profile
+from database import get_db
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 

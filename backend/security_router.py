@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
-from .database import get_db
-from .models import User, ChangePasswordTOTP
-from .auth import get_current_user, pwd_context
-from .totp_utils import TOTPUtility
-from .schemas import TOTPInitOut, TOTPVerifyIn, PasswordChangeIn
-from .audit_logger import audit_logger
+from database import get_db
+from models import User, ChangePasswordTOTP
+from auth.router import get_current_user, pwd_context
+from totp_utils import TOTPUtility
+from schemas import TOTPInitOut, TOTPVerifyIn, PasswordChangeIn
+from audit_logger import audit_logger
 import re
 
 router = APIRouter(prefix="/security", tags=["Security"])

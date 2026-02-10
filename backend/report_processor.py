@@ -7,7 +7,7 @@ import fitz  # PyMuPDF
 from PIL import Image
 from typing import Optional, List, Dict
 
-from .lab_parser import lab_parser
+from lab_parser import lab_parser
 
 class ReportProcessor:
     def __init__(self):

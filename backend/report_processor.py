@@ -1,9 +1,7 @@
-import cv2
 import io
 import re
 import os
 import numpy as np
-import fitz  # PyMuPDF
 from PIL import Image
 from typing import Optional, List, Dict
 
@@ -54,6 +52,7 @@ class ReportProcessor:
         STEP 2: OCR PREPROCESSING (MANDATORY)
         Improve resolution, convert to Grayscale, Denoise, and Thresholding.
         """
+        import cv2
         try:
             # 1. Convert to grayscale
             if len(image_np.shape) == 3:
@@ -195,6 +194,7 @@ class ReportProcessor:
         """
         STEP 2 & 3: PDF Type Detection & Extraction
         """
+        import fitz
         try:
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             

@@ -1,7 +1,9 @@
+import cv2
 import io
 import re
-import os
+import easyocr
 import numpy as np
+import fitz  # PyMuPDF
 from PIL import Image
 from typing import Optional, List, Dict
 
@@ -10,27 +12,13 @@ from lab_parser import lab_parser
 class ReportProcessor:
     def __init__(self):
         # Initialize the OCR reader once to avoid overhead
-        self._reader = None
-
-    @property
-    def reader(self):
-        """Lazy loader for EasyOCR reader."""
-        if self._reader is None:
-            try:
-                # Check if we should skip heavy models (useful for low-memory environments like Render Free Tier)
-                if os.getenv("SKIP_HEAVY_MODELS", "false").lower() == "true":
-                    print("⏭️ Skipping EasyOCR initialization (SKIP_HEAVY_MODELS is true)")
-                    return None
-
-                print("⏳ Loading EasyOCR...")
-                import easyocr
-                # Using CPU for OCR as per requirements
-                self._reader = easyocr.Reader(['en'], gpu=False)
-                print("✅ EasyOCR (CPU) initialized for medical report processing.")
-            except Exception as e:
-                print(f"⚠️ EasyOCR Initialization Warning: {e}")
-                self._reader = None
-        return self._reader
+        try:
+            # Using CPU for OCR as per requirements
+            self.reader = easyocr.Reader(['en'], gpu=False)
+            print("✅ EasyOCR (CPU) initialized for medical report processing.")
+        except Exception as e:
+            print(f"⚠️ EasyOCR Initialization Warning: {e}")
+            self.reader = None
 
     def validate_file(self, file_bytes: bytes, filename: str) -> Optional[str]:
         """
@@ -52,7 +40,6 @@ class ReportProcessor:
         STEP 2: OCR PREPROCESSING (MANDATORY)
         Improve resolution, convert to Grayscale, Denoise, and Thresholding.
         """
-        import cv2
         try:
             # 1. Convert to grayscale
             if len(image_np.shape) == 3:
@@ -194,7 +181,6 @@ class ReportProcessor:
         """
         STEP 2 & 3: PDF Type Detection & Extraction
         """
-        import fitz
         try:
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             

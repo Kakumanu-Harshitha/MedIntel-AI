@@ -11,77 +11,57 @@ _EMBEDDING_MODEL = None
 PINECONE_INDEX = None
 
 try:
-    # Moved imports inside functions/conditional blocks for lazy loading
+    from pinecone import Pinecone, ServerlessSpec
+    from sentence_transformers import SentenceTransformer
     
     def get_embedding_model():
         global _EMBEDDING_MODEL
         if _EMBEDDING_MODEL is None:
-            # Check if we should skip heavy models (useful for low-memory environments like Render Free Tier)
-            if os.getenv("SKIP_HEAVY_MODELS", "false").lower() == "true":
-                print("⏭️ Skipping RAG Embedding Model loading (SKIP_HEAVY_MODELS is true)")
-                return None
-
             print("⏳ Loading RAG Embedding Model (all-mpnet-base-v2)...")
-            from sentence_transformers import SentenceTransformer
             _EMBEDDING_MODEL = SentenceTransformer('all-mpnet-base-v2')
             print("✅ RAG Embedding Model loaded.")
         return _EMBEDDING_MODEL
 
-    def get_pinecone_index():
-        global PINECONE_INDEX, RAG_ENABLED
-        if PINECONE_INDEX is not None:
-            return PINECONE_INDEX
-
-        api_key = os.getenv("PINECONE_API_KEY")
-        index_name = os.getenv("PINECONE_INDEX", "health-assistant-medical-knowledge")
+    # 2. Initialize Pinecone
+    api_key = os.getenv("PINECONE_API_KEY")
+    index_name = os.getenv("PINECONE_INDEX", "health-assistant-medical-knowledge")
+    
+    if api_key:
+        pc = Pinecone(api_key=api_key)
         
-        if not api_key:
-            print("⚠️ PINECONE_API_KEY not found. Switching to MOCK RAG MODE (for demo).")
-            RAG_ENABLED = True
-            return None
-
-        try:
-            from pinecone import Pinecone, ServerlessSpec
-            pc = Pinecone(api_key=api_key)
-            
-            # Check if index exists, if not create it
-            existing_indexes = [i.name for i in pc.list_indexes()]
-            if index_name not in existing_indexes:
-                print(f"Creating Pinecone index: {index_name}...")
-                pc.create_index(
-                    name=index_name,
-                    dimension=768, # Output dimension of all-mpnet-base-v2
-                    metric="cosine",
-                    spec=ServerlessSpec(
-                        cloud="aws",
-                        region="us-east-1"
-                    )
+        # Check if index exists, if not create it
+        existing_indexes = [i.name for i in pc.list_indexes()]
+        if index_name not in existing_indexes:
+            print(f"Creating Pinecone index: {index_name}...")
+            pc.create_index(
+                name=index_name,
+                dimension=768, # Output dimension of all-mpnet-base-v2
+                metric="cosine",
+                spec=ServerlessSpec(
+                    cloud="aws",
+                    region="us-east-1"
                 )
-                time.sleep(2) # Wait for initialization
-                
-            PINECONE_INDEX = pc.Index(index_name)
-            RAG_ENABLED = True
-            print(f"✅ Pinecone Index '{index_name}' connected.")
-            return PINECONE_INDEX
-        except Exception as e:
-            print(f"❌ Pinecone Initialization Error: {e}")
-            return None
+            )
+            time.sleep(2) # Wait for initialization
+            
+        PINECONE_INDEX = pc.Index(index_name)
+        RAG_ENABLED = True
+        print(f"✅ Pinecone Index '{index_name}' connected.")
+    else:
+        print("⚠️ PINECONE_API_KEY not found. Switching to MOCK RAG MODE (for demo).")
+        RAG_ENABLED = True # Enable to show UI features
 
+except ImportError:
+    print("⚠️ Missing dependencies: 'pinecone' or 'sentence-transformers'. Run pip install.")
 except Exception as e:
     print(f"❌ RAG Service Initialization Error: {e}")
 
 
 class RAGService:
     def __init__(self):
-        self.enabled = RAG_ENABLED # This might still be False if get_pinecone_index hasn't run
-    
-    @property
-    def index(self):
-        return get_pinecone_index()
-
-    @property
-    def mock_mode(self):
-        return self.index is None and self.enabled
+        self.enabled = RAG_ENABLED
+        self.index = PINECONE_INDEX
+        self.mock_mode = (PINECONE_INDEX is None)
 
     @property
     def model(self):

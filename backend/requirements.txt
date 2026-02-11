@@ -25,6 +25,3 @@ pyotp
 qrcode
 cryptography
 slowapi
-easyocr
-opencv-python-headless
-pymupdf

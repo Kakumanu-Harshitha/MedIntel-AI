@@ -6,6 +6,8 @@ import ReactMarkdown from 'react-markdown';
 import { dashboardService, feedbackService } from '../services/api';
 import FeedbackModal from './FeedbackModal';
 
+const API_URL = 'https://multimodal-rag-health-assistant.onrender.com';
+
 const SeverityBadge = ({ level }) => {
   const configs = {
     LOW: { color: "bg-emerald-50 text-emerald-700 border-emerald-100", icon: ShieldCheck },
@@ -239,7 +241,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                  <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-600/30 group cursor-pointer hover:scale-105 transition-transform">
                     <Volume2 size={16} className="group-hover:animate-pulse" />
                  </div>
-                 <audio controls src={`http://localhost:8000${audioUrl}`} className="w-full h-7" />
+                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7" />
             </div>
           </div>
         )}
@@ -376,7 +378,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                  <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-600/30">
                     <Volume2 size={16} />
                  </div>
-                 <audio controls src={`http://localhost:8000${audioUrl}`} className="w-full h-7" />
+                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7" />
             </div>
           </div>
         )}
@@ -564,7 +566,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                  <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
                     <Volume2 size={16} />
                  </div>
-                 <audio controls src={`http://localhost:8000${audioUrl}`} className="w-full h-7 bg-transparent" />
+                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7 bg-transparent" />
             </div>
           </div>
         )}
@@ -682,7 +684,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                 <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-brand-600 shadow-lg group-hover:scale-105 transition-transform">
                     <Volume2 size={16} className="animate-pulse" />
                 </div>
-                <audio controls src={`http://localhost:8000${audioUrl}`} className="w-full h-7 invert brightness-200" />
+                <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7 invert brightness-200" />
             </div>
          )}
          
@@ -798,7 +800,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                  <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-600/30 group cursor-pointer hover:scale-105 transition-transform">
                     <Volume2 size={18} className="group-hover:animate-pulse" />
                  </div>
-                 <audio controls src={`http://localhost:8000${audioUrl}`} className="w-full h-8" />
+                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-8" />
             </div>
           </div>
         )}
@@ -964,7 +966,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                  <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-600/30 group cursor-pointer hover:scale-105 transition-transform">
                     <Volume2 size={18} className="group-hover:animate-pulse" />
                  </div>
-                 <audio controls src={`http://localhost:8000${audioUrl}`} className="w-full h-8" />
+                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-8" />
             </div>
           </div>
         )}

@@ -1,9 +1,10 @@
 import json
+import os
 from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException, Request
 from typing import Optional, List
 from PIL import Image
-import open_clip
-import torch
+# import open_clip <-- Moved to lazy loader
+# import torch <-- Moved to lazy loader
 from sqlalchemy.orm import Session
 import mongo_memory
 import llm_service
@@ -20,49 +21,72 @@ limiter = Limiter(key_func=get_remote_address)
 # --- Router Setup ---
 router = APIRouter(prefix="/query", tags=["Query Service"])
 
-# --- Load MediCLIP (BiomedCLIP) Model Globally ---
+# --- Load MediCLIP (BiomedCLIP) Model (Lazy Loading) ---
 # Using microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224 via open_clip
-# This model aligns medical images with medical text using PubMedBERT.
 MEDICLIP_MODEL_ID = "hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
 
-try:
-    # Load model and transforms using open_clip
-    model, _, preprocess = open_clip.create_model_and_transforms(MEDICLIP_MODEL_ID)
-    tokenizer = open_clip.get_tokenizer(MEDICLIP_MODEL_ID)
-    print("✅ MediCLIP (BiomedCLIP) model loaded successfully via open_clip.")
+_MEDICLIP_RESOURCES = None
+
+def get_mediclip_resources():
+    """Lazy loader for MediCLIP model to save memory at startup."""
+    global _MEDICLIP_RESOURCES
     
-    # Pre-defined medical concepts for Zero-Shot Classification / Feature Extraction
-    CANDIDATE_LABELS = [
-        "Chest X-ray", "Chest Radiograph", "MRI Scan", "CT Scan", 
-        "Dermatology Skin Condition", "Skin Rash", "Skin Lesion",
-        "Eye Ophthalmology", "Retina Scan", "Red Eye", "Ocular Condition",
-        "Medical Document", "Prescription", "Lab Report", "Chart or Graph",
-        "Ultrasound", "Microscope Slide", "Healthy Human Tissue",
-        "Bone X-ray", "Fracture", "Pneumonia", "Lung Inflammation"
-    ]
-    
-except Exception as e:
-    processor = None # Not used with open_clip, but keeping for safety if referenced elsewhere (unlikely)
-    preprocess = None
-    tokenizer = None
-    model = None
-    CANDIDATE_LABELS = []
-    print(f"⚠️ WARNING: Could not load MediCLIP model. Image functionality will be disabled. Error: {e}")
+    # Check if we should skip heavy models (useful for low-memory environments like Render Free Tier)
+    if os.getenv("SKIP_HEAVY_MODELS", "false").lower() == "true":
+        print("⏭️ Skipping MediCLIP loading (SKIP_HEAVY_MODELS is true)")
+        return None
+
+    if _MEDICLIP_RESOURCES is None:
+        try:
+            print(f"⏳ Loading MediCLIP model ({MEDICLIP_MODEL_ID})...")
+            import open_clip
+            model, _, preprocess = open_clip.create_model_and_transforms(MEDICLIP_MODEL_ID)
+            tokenizer = open_clip.get_tokenizer(MEDICLIP_MODEL_ID)
+            
+            # Pre-defined medical concepts for Zero-Shot Classification
+            candidate_labels = [
+                "Chest X-ray", "Chest Radiograph", "MRI Scan", "CT Scan", 
+                "Dermatology Skin Condition", "Skin Rash", "Skin Lesion",
+                "Eye Ophthalmology", "Retina Scan", "Red Eye", "Ocular Condition",
+                "Medical Document", "Prescription", "Lab Report", "Chart or Graph",
+                "Ultrasound", "Microscope Slide", "Healthy Human Tissue",
+                "Bone X-ray", "Fracture", "Pneumonia", "Lung Inflammation"
+            ]
+            
+            _MEDICLIP_RESOURCES = {
+                "model": model,
+                "preprocess": preprocess,
+                "tokenizer": tokenizer,
+                "candidate_labels": candidate_labels
+            }
+            print("✅ MediCLIP model loaded successfully.")
+        except Exception as e:
+            print(f"⚠️ WARNING: Could not load MediCLIP model. Error: {e}")
+            return None
+            
+    return _MEDICLIP_RESOURCES
 
 def analyze_image_with_mediclip(image: Image.Image) -> str:
     """
     Uses MediCLIP to analyze the image via Zero-Shot Classification.
     Returns a text description of the most likely labels.
     """
-    if not model or not preprocess or not tokenizer:
-        return "[Image Analysis Unavailable]"
+    resources = get_mediclip_resources()
+    if not resources:
+        return "[Image Analysis Unavailable - Model Not Loaded]"
+
+    import torch
+    model = resources["model"]
+    preprocess = resources["preprocess"]
+    tokenizer = resources["tokenizer"]
+    candidate_labels = resources["candidate_labels"]
 
     try:
         # 1. Preprocess Image
         image_input = preprocess(image).unsqueeze(0) # Add batch dimension
         
         # 2. Tokenize Text Labels
-        text_tokens = tokenizer(CANDIDATE_LABELS)
+        text_tokens = tokenizer(candidate_labels)
         
         # 3. Inference
         with torch.no_grad():
@@ -83,7 +107,7 @@ def analyze_image_with_mediclip(image: Image.Image) -> str:
         findings = []
         for i in range(top_k):
             score = values[i].item()
-            label = CANDIDATE_LABELS[indices[i].item()]
+            label = candidate_labels[indices[i].item()]
             findings.append(f"{label} ({score:.4f})")
         
         if not findings:

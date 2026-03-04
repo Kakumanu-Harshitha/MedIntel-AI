@@ -25,8 +25,10 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True,
-    pool_pre_ping=True
+    echo=False,
+    pool_pre_ping=True,
+    pool_size=50,
+    max_overflow=100
 )
 
 SessionLocal = sessionmaker(

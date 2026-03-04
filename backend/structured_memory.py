@@ -41,7 +41,7 @@ class StructuredMemory:
                 "type": chunk_type,
                 "content": content,
                 "confidence": confidence,
-                "timestamp": datetime.now(timezone.utc)
+                "timestamp": datetime.utcnow()
             })
             print(f"✅ Stored {chunk_type} for user {user_id}")
         except Exception as e:
@@ -78,3 +78,4 @@ class StructuredMemory:
 
 # Instantiate the service
 structured_memory = StructuredMemory()
+

@@ -254,3 +254,4 @@ async def reset_password(payload: PasswordResetConfirm, request: Request, db: Se
     )
     
     return {"message": "Password updated successfully. You can now login with your new password."}
+

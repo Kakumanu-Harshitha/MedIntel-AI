@@ -17,38 +17,50 @@ async def get_health_metrics(db: Session = Depends(get_db), owner: User = Depend
     Returns high-level system health metrics.
     """
     try:
+        from sqlalchemy import cast, Date
+        now_utc = datetime.now(timezone.utc)
+
         # 1. Total Users
         total_users = db.query(User).count()
-        
-        # 2. Active Users (Today)
-        today = datetime.now(timezone.utc).date()
-        # Using cast for better compatibility with different DBs
-        from sqlalchemy import cast, Date
+
+        # 2. Active Users (Today) — exclude NULL user_id (anonymous/failed events)
+        today = now_utc.date()
         active_today = db.query(func.count(func.distinct(AuditLog.user_id)))\
-            .filter(cast(AuditLog.timestamp, Date) == today).scalar()
-            
-        # 3. Active Users (Last 7 Days)
-        week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+            .filter(
+                AuditLog.user_id.isnot(None),
+                cast(AuditLog.timestamp, Date) == today
+            ).scalar()
+
+        # 3. Active Users (Last 7 Days) — exclude NULL user_id
+        week_ago = now_utc - timedelta(days=7)
         active_week = db.query(func.count(func.distinct(AuditLog.user_id)))\
-            .filter(AuditLog.timestamp >= week_ago).scalar()
-            
-        # 4. Total Queries (Last 24h)
-        day_ago = datetime.now(timezone.utc) - timedelta(days=1)
+            .filter(
+                AuditLog.user_id.isnot(None),
+                AuditLog.timestamp >= week_ago
+            ).scalar()
+
+        # 4. Total AI Queries (Last 24h)
+        day_ago = now_utc - timedelta(days=1)
         total_queries = db.query(AuditLog).filter(
             AuditLog.timestamp >= day_ago,
             AuditLog.action == "AI_QUERY"
         ).count()
-        
-        # 5. Error Rate (Last 24h)
-        errors = db.query(AuditLog).filter(
+
+        # 5. Error Rate (Last 24h) — only AI_QUERY failures so numerator/denominator match
+        ai_errors = db.query(AuditLog).filter(
             AuditLog.timestamp >= day_ago,
+            AuditLog.action == "AI_QUERY",
             AuditLog.status == "FAILURE"
         ).count()
-        error_rate = (errors / total_queries * 100) if total_queries > 0 else 0
-        
-        # 6. HITL Escalations (Total)
+        error_rate = (ai_errors / total_queries * 100) if total_queries > 0 else 0
+
+        # 6. HITL Escalations — all-time total AND last 24h
         hitl_escalations = db.query(AuditLog).filter(
             AuditLog.action == "HITL_ESCALATION"
+        ).count()
+        hitl_escalations_24h = db.query(AuditLog).filter(
+            AuditLog.action == "HITL_ESCALATION",
+            AuditLog.timestamp >= day_ago
         ).count()
 
         return {
@@ -57,11 +69,11 @@ async def get_health_metrics(db: Session = Depends(get_db), owner: User = Depend
             "active_week": active_week or 0,
             "total_queries": total_queries,
             "error_rate": round(error_rate, 2),
-            "hitl_escalations": hitl_escalations
+            "hitl_escalations": hitl_escalations,
+            "hitl_escalations_24h": hitl_escalations_24h
         }
     except Exception as e:
         print(f"❌ Health Metrics Error: {str(e)}")
-        # Return partial data or empty metrics instead of 500
         return {
             "total_users": 0,
             "active_today": 0,
@@ -69,6 +81,7 @@ async def get_health_metrics(db: Session = Depends(get_db), owner: User = Depend
             "total_queries": 0,
             "error_rate": 0,
             "hitl_escalations": 0,
+            "hitl_escalations_24h": 0,
             "db_error": str(e)
         }
 

@@ -81,7 +81,7 @@ def store_message(user_id: str, role: str, content: str, report_type: str = None
             "user_id": user_id,
             "role": role,
             "content": content,
-            "timestamp": datetime.now(timezone.utc)
+            "timestamp": datetime.utcnow()
         }
         
         report_id = None
@@ -157,7 +157,7 @@ def log_feedback(user_id: str, rating: str, comment: str = None, context: str = 
             "comment": comment,
             "context": context,
             "report_id": report_id,
-            "timestamp": datetime.now(timezone.utc)
+            "timestamp": datetime.utcnow()
         })
     except Exception as e:
         print(f"❌ ERROR: Failed to log feedback. Error: {e}")
@@ -169,7 +169,7 @@ def log_analytics(event_type: str, details: dict):
         analytics_collection.insert_one({
             "event_type": event_type,
             "details": details,
-            "timestamp": datetime.now(timezone.utc)
+            "timestamp": datetime.utcnow()
         })
     except Exception as e:
         print(f"❌ ERROR: Failed to log analytics. Error: {e}")
@@ -301,3 +301,4 @@ def get_feedback_metrics():
             "reasons_breakdown": {},
             "recent_feedback": []
         }
+

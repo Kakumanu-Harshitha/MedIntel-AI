@@ -35,7 +35,7 @@ async def create_or_update_profile(
     for key, value in updated_fields.items():
         setattr(profile, key, value)
 
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.updated_at = datetime.utcnow()
 
     db.add(profile)
     db.commit()

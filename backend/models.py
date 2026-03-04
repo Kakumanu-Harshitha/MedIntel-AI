@@ -77,3 +77,4 @@ class ChangePasswordTOTP(Base):
     verified = Column(Integer, default=0) # 0 for false, 1 for true
     attempts = Column(Integer, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+

@@ -3,7 +3,7 @@ import uuid
 import json
 import hashlib
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any, Dict
 from sqlalchemy.orm import Session
 from fastapi import Request
@@ -35,7 +35,7 @@ class AuditLogger:
         """
         # Prepare log data
         log_id = str(uuid.uuid4())
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
         
         ip_address = "unknown"
         user_agent = "unknown"

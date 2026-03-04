@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import { dashboardService, feedbackService } from '../services/api';
 import FeedbackModal from './FeedbackModal';
 
-const API_URL = 'https://multimodal-rag-health-assistant.onrender.com';
+const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:8000';
 
 const SeverityBadge = ({ level }) => {
   const configs = {
@@ -54,9 +54,9 @@ const ConfidenceBar = ({ score, reason }) => {
         <span className={clsx("text-sm font-black tabular-nums", color.replace('bg-', 'text-'))}>{percentage}%</span>
       </div>
       <div className="h-2.5 w-full bg-navy-50/50 rounded-full overflow-hidden border border-navy-100/30 p-0.5">
-        <div 
+        <div
           className={clsx("h-full transition-all duration-1000 ease-out rounded-full shadow-sm", color)}
-          style={{ width: `${percentage}%` }} 
+          style={{ width: `${percentage}%` }}
         />
       </div>
     </div>
@@ -80,17 +80,17 @@ const FeedbackSection = ({ feedbackGiven, onFeedback, onNegativeClick }) => {
       <div className="flex items-center justify-end gap-3">
         <span className="text-[9px] font-black text-navy-400 uppercase tracking-widest">Helpful?</span>
         <div className="flex items-center gap-2">
-          <button 
-              onClick={() => onFeedback('positive')}
-              className="p-2 rounded-lg transition-all border shadow-sm active:scale-90 bg-white text-navy-400 hover:text-emerald-500 hover:border-emerald-200"
+          <button
+            onClick={() => onFeedback('positive')}
+            className="p-2 rounded-lg transition-all border shadow-sm active:scale-90 bg-white text-navy-400 hover:text-emerald-500 hover:border-emerald-200"
           >
-              <ThumbsUp className="h-3.5 w-3.5" />
+            <ThumbsUp className="h-3.5 w-3.5" />
           </button>
-          <button 
-              onClick={onNegativeClick}
-              className="p-2 rounded-lg transition-all border shadow-sm active:scale-90 bg-white text-navy-400 hover:text-rose-500 hover:border-rose-200"
+          <button
+            onClick={onNegativeClick}
+            className="p-2 rounded-lg transition-all border shadow-sm active:scale-90 bg-white text-navy-400 hover:text-rose-500 hover:border-rose-200"
           >
-              <ThumbsDown className="h-3.5 w-3.5" />
+            <ThumbsDown className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -101,11 +101,11 @@ const FeedbackSection = ({ feedbackGiven, onFeedback, onNegativeClick }) => {
 const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
   const [downloading, setDownloading] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
-  
+
   // Safe Parsing
   const initialData = reportProp || data;
   let report = initialData;
-  
+
   // If initialData is a message object from MongoDB (has content field)
   if (initialData && typeof initialData === 'object' && 'content' in initialData) {
     const content = initialData.content;
@@ -148,38 +148,38 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
     if (feedbackGiven) return;
     setFeedbackGiven(rating);
     try {
-        // Use the already parsed 'report' object for context
-        const context = typeof report === 'string' ? report : report?.summary || report?.health_information || "No summary available";
-        await feedbackService.submitFeedback(rating, context, reportId, comment);
-        
-        if (rating === 'positive') {
-          toast.success('Thank you for your valuable feedback!', {
-            style: {
-              borderRadius: '12px',
-              background: '#0F172A',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            },
-          });
-        } else {
-          toast.success('Thanks! Your feedback helps us improve.', {
-            style: {
-              borderRadius: '12px',
-              background: '#0F172A',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            },
-          });
-        }
+      // Use the already parsed 'report' object for context
+      const context = typeof report === 'string' ? report : report?.summary || report?.health_information || "No summary available";
+      await feedbackService.submitFeedback(rating, context, reportId, comment);
+
+      if (rating === 'positive') {
+        toast.success('Thank you for your valuable feedback!', {
+          style: {
+            borderRadius: '12px',
+            background: '#0F172A',
+            color: '#fff',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          },
+        });
+      } else {
+        toast.success('Thanks! Your feedback helps us improve.', {
+          style: {
+            borderRadius: '12px',
+            background: '#0F172A',
+            color: '#fff',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          },
+        });
+      }
     } catch (e) {
-        console.error("Feedback error", e);
-        toast.error('Failed to submit feedback.');
+      console.error("Feedback error", e);
+      toast.error('Failed to submit feedback.');
     }
   };
 
@@ -196,7 +196,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
         alert("Please log in to download reports.");
         return;
       }
-      
+
       const blob = await dashboardService.getReportPdf(email, reportId);
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
@@ -238,14 +238,14 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
         {audioUrl && (
           <div className="px-5 pt-5">
             <div className="bg-navy-50/50 rounded-xl p-2.5 flex items-center gap-3 border border-navy-100/40 backdrop-blur-sm">
-                 <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-600/30 group cursor-pointer hover:scale-105 transition-transform">
-                    <Volume2 size={16} className="group-hover:animate-pulse" />
-                 </div>
-                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7" />
+              <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-600/30 group cursor-pointer hover:scale-105 transition-transform">
+                <Volume2 size={16} className="group-hover:animate-pulse" />
+              </div>
+              <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7" />
             </div>
           </div>
         )}
-        
+
         <div className="p-5 border-b border-navy-50/50 bg-gradient-to-br from-brand-50/30 via-white to-transparent">
           <div className="flex flex-col md:flex-row items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
@@ -266,7 +266,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                 </div>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleDownload}
               disabled={downloading}
               className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-navy-900 text-[11px] font-bold text-white hover:bg-brand-600 transition-all shadow-lg shadow-navy-900/10 active:scale-95 disabled:opacity-50"
@@ -279,7 +279,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               {downloading ? 'Preparing...' : 'Download Results'}
             </button>
           </div>
-          
+
           <div className="space-y-3">
             <div className="relative">
               <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
@@ -313,13 +313,13 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
               <h4 className="text-brand-900 font-black text-[10px] mb-2.5 flex items-center gap-2 relative z-10">
                 <div className="p-1 bg-brand-100 rounded-md">
-                    <Stethoscope className="h-3 w-3" />
+                  <Stethoscope className="h-3 w-3" />
                 </div>
                 Clinical Steps
               </h4>
               <p className="text-brand-800 text-[11px] leading-relaxed font-bold relative z-10">{report.recommended_next_steps}</p>
             </div>
-            
+
             {report.trusted_sources?.length > 0 && (
               <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100/50 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                 <div className="absolute -top-3 -right-3 p-4 opacity-5 group-hover:opacity-10 transition-opacity -rotate-12 group-hover:rotate-0 duration-500">
@@ -344,16 +344,16 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           </div>
         </div>
 
-        <FeedbackSection 
-          feedbackGiven={feedbackGiven} 
-          onFeedback={handleFeedback} 
+        <FeedbackSection
+          feedbackGiven={feedbackGiven}
+          onFeedback={handleFeedback}
           onNegativeClick={() => setIsModalOpen(true)}
         />
 
-        <FeedbackModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleNegativeSubmit} 
+        <FeedbackModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleNegativeSubmit}
         />
 
         <div className="px-5 py-3 bg-navy-50/30 border-t border-navy-100/40 flex items-start gap-3">
@@ -375,14 +375,14 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
         {audioUrl && (
           <div className="px-5 pt-5">
             <div className="bg-navy-50/50 rounded-xl p-2.5 flex items-center gap-3 border border-navy-100/40 backdrop-blur-sm">
-                 <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-600/30">
-                    <Volume2 size={16} />
-                 </div>
-                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7" />
+              <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-600/30">
+                <Volume2 size={16} />
+              </div>
+              <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7" />
             </div>
           </div>
         )}
-        
+
         <div className="p-5 border-b border-navy-50/50 bg-gradient-to-br from-brand-50/30 via-white to-transparent">
           <div className="flex flex-col md:flex-row items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
@@ -403,7 +403,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                 </div>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleDownload}
               disabled={downloading}
               className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-navy-900 text-[11px] font-bold text-white hover:bg-brand-600 transition-all shadow-lg shadow-navy-900/10 active:scale-95 disabled:opacity-50"
@@ -416,39 +416,39 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               {downloading ? 'Preparing...' : 'Download'}
             </button>
           </div>
-          
-            <div className="space-y-3">
-              <div className="relative">
-                <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
-                <p className="text-navy-700 text-sm leading-relaxed font-semibold">{report.summary}</p>
-              </div>
-              
-              {report.health_information && (
-                <div className="relative mt-3 pt-3 border-t border-navy-50/50">
-                  <div className="absolute -left-3 top-3 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
-                  <div className="text-navy-800 text-[11px] leading-relaxed font-semibold italic prose prose-sm prose-navy max-w-none">
-                    <ReactMarkdown>{report.health_information}</ReactMarkdown>
-                  </div>
-                </div>
-              )}
 
-              {report.summary?.includes("seek medical attention") && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3 animate-pulse-soft shadow-sm shadow-rose-500/10">
-                  <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
-                    <AlertOctagon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-rose-900 font-black text-[10px] uppercase tracking-wider mb-1">Critical Alert</h4>
-                    <p className="text-rose-700 text-[11px] font-bold leading-relaxed">
-                      Some values are significantly outside the normal range. Consult a professional.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {report.ai_confidence && <ConfidenceBar score={report.ai_confidence} />}
+          <div className="space-y-3">
+            <div className="relative">
+              <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
+              <p className="text-navy-700 text-sm leading-relaxed font-semibold">{report.summary}</p>
             </div>
+
+            {report.health_information && (
+              <div className="relative mt-3 pt-3 border-t border-navy-50/50">
+                <div className="absolute -left-3 top-3 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
+                <div className="text-navy-800 text-[11px] leading-relaxed font-semibold italic prose prose-sm prose-navy max-w-none">
+                  <ReactMarkdown>{report.health_information}</ReactMarkdown>
+                </div>
+              </div>
+            )}
+
+            {report.summary?.includes("seek medical attention") && (
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3 animate-pulse-soft shadow-sm shadow-rose-500/10">
+                <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
+                  <AlertOctagon className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-rose-900 font-black text-[10px] uppercase tracking-wider mb-1">Critical Alert</h4>
+                  <p className="text-rose-700 text-[11px] font-bold leading-relaxed">
+                    Some values are significantly outside the normal range. Consult a professional.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {report.ai_confidence && <ConfidenceBar score={report.ai_confidence} />}
           </div>
+        </div>
 
         <div className="p-5">
           <h4 className="text-[9px] font-black text-navy-400 uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
@@ -481,10 +481,10 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                       <td className="px-4 py-3">
                         <span className={clsx(
                           "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest shadow-sm border",
-                          test.status?.toLowerCase() === 'normal' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : 
-                          test.status?.toLowerCase() === 'borderline' ? "bg-amber-50 text-amber-700 border-amber-100" :
-                          (test.status?.toLowerCase() === 'high' || test.status?.toLowerCase() === 'low') ? "bg-rose-50 text-rose-700 border-rose-100" :
-                          "bg-navy-50 text-navy-700 border-navy-100"
+                          test.status?.toLowerCase() === 'normal' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                            test.status?.toLowerCase() === 'borderline' ? "bg-amber-50 text-amber-700 border-amber-100" :
+                              (test.status?.toLowerCase() === 'high' || test.status?.toLowerCase() === 'low') ? "bg-rose-50 text-rose-700 border-rose-100" :
+                                "bg-navy-50 text-navy-700 border-navy-100"
                         )}>
                           {test.status}
                         </span>
@@ -532,16 +532,16 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           </div>
         </div>
 
-        <FeedbackSection 
-          feedbackGiven={feedbackGiven} 
-          onFeedback={handleFeedback} 
+        <FeedbackSection
+          feedbackGiven={feedbackGiven}
+          onFeedback={handleFeedback}
           onNegativeClick={() => setIsModalOpen(true)}
         />
 
-        <FeedbackModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleNegativeSubmit} 
+        <FeedbackModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleNegativeSubmit}
         />
 
         <div className="px-5 py-3 bg-navy-50/30 border-t border-navy-100/40 flex items-start gap-3">
@@ -563,14 +563,14 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
         {audioUrl && (
           <div className="px-5 pt-5">
             <div className="bg-navy-50 rounded-xl p-2.5 flex items-center gap-3 border border-navy-100/50">
-                 <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
-                    <Volume2 size={16} />
-                 </div>
-                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7 bg-transparent" />
+              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                <Volume2 size={16} />
+              </div>
+              <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7 bg-transparent" />
             </div>
           </div>
         )}
-        
+
         <div className="p-5 border-b border-navy-50 bg-gradient-to-br from-teal-50/50 via-white to-transparent">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
@@ -585,11 +585,11 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-1">
-                    <span className="px-2 py-0.5 bg-teal-50 text-teal-700 text-[8px] font-bold uppercase rounded-md border border-teal-100">Legacy</span>
+                  <span className="px-2 py-0.5 bg-teal-50 text-teal-700 text-[8px] font-bold uppercase rounded-md border border-teal-100">Legacy</span>
                 </div>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleDownload}
               disabled={downloading}
               className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-navy-100 text-[11px] font-bold text-navy-600 hover:text-brand-600 hover:border-brand-200 hover:bg-brand-50 transition-all shadow-sm active:scale-95"
@@ -649,16 +649,16 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           </div>
         </div>
 
-        <FeedbackSection 
-          feedbackGiven={feedbackGiven} 
-          onFeedback={handleFeedback} 
+        <FeedbackSection
+          feedbackGiven={feedbackGiven}
+          onFeedback={handleFeedback}
           onNegativeClick={() => setIsModalOpen(true)}
         />
 
-        <FeedbackModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleNegativeSubmit} 
+        <FeedbackModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleNegativeSubmit}
         />
 
         <div className="px-5 py-3 bg-navy-50/50 border-t border-navy-100 flex items-start gap-3">
@@ -675,54 +675,54 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
 
     return (
       <div className="bg-gradient-to-br from-brand-600 to-navy-900 rounded-2xl p-5 shadow-premium border border-white/10 animate-slide-up relative overflow-hidden group max-w-xl">
-         {/* Decorative elements - Scaled */}
-         <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors" />
-         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-brand-400/5 rounded-full blur-3xl group-hover:bg-brand-400/10 transition-colors" />
+        {/* Decorative elements - Scaled */}
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors" />
+        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-brand-400/5 rounded-full blur-3xl group-hover:bg-brand-400/10 transition-colors" />
 
-         {audioUrl && (
-            <div className="mb-5 bg-white/10 backdrop-blur-md p-2.5 rounded-xl flex items-center gap-4 border border-white/20 shadow-xl">
-                <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-brand-600 shadow-lg group-hover:scale-105 transition-transform">
-                    <Volume2 size={16} className="animate-pulse" />
-                </div>
-                <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7 invert brightness-200" />
+        {audioUrl && (
+          <div className="mb-5 bg-white/10 backdrop-blur-md p-2.5 rounded-xl flex items-center gap-4 border border-white/20 shadow-xl">
+            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-brand-600 shadow-lg group-hover:scale-105 transition-transform">
+              <Volume2 size={16} className="animate-pulse" />
             </div>
-         )}
-         
-         <div className="flex items-center gap-4 mb-5 relative z-10">
-            <div className="p-2.5 bg-white/15 backdrop-blur-sm rounded-xl shadow-inner border border-white/20 rotate-3 group-hover:rotate-0 transition-transform">
-                <HelpCircle className="h-5 w-5 text-white" />
-            </div>
-            <div>
-                <h3 className="text-lg font-black text-white tracking-tight leading-none mb-1.5">Clarification Needed</h3>
-                <div className="flex items-center gap-2">
-                  <span className="px-1.5 py-0.5 bg-white/20 text-white text-[7px] font-black uppercase rounded-md border border-white/10 backdrop-blur-sm tracking-widest">Triage Mode</span>
-                  <span className="w-1 h-1 rounded-full bg-white/30" />
-                  <span className="text-[7px] font-bold text-white/60 uppercase tracking-widest">{isLatest ? 'Pending' : 'Answered'}</span>
-                </div>
-            </div>
-         </div>
+            <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-7 invert brightness-200" />
+          </div>
+        )}
 
-         <p className="text-white/90 mb-5 leading-relaxed font-bold text-sm relative z-10 italic">"{report.context}"</p>
-         
-         <div className="space-y-2.5 relative z-10">
-            {report.questions && report.questions.map((q, i) => (
-                <div key={i} className="bg-white/5 backdrop-blur-md p-3 rounded-xl border border-white/10 text-white font-bold shadow-lg flex gap-3 hover:bg-white/10 hover:border-white/30 transition-all group/item cursor-pointer">
-                    <span className="flex-shrink-0 w-7 h-7 bg-white/10 text-white rounded-lg flex items-center justify-center text-[10px] font-black border border-white/10 group-hover/item:bg-white group-hover/item:text-brand-600 transition-all">{i + 1}</span>
-                    <span className="mt-1 text-xs group-hover/item:translate-x-1 transition-transform">{q}</span>
-                </div>
-            ))}
-         </div>
-         
-         {isLatest && (
-            <div className="mt-5 flex items-center gap-3 px-1 relative z-10">
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" />
-                </div>
-                <p className="text-[8px] text-white/50 font-black uppercase tracking-widest">Awaiting response</p>
+        <div className="flex items-center gap-4 mb-5 relative z-10">
+          <div className="p-2.5 bg-white/15 backdrop-blur-sm rounded-xl shadow-inner border border-white/20 rotate-3 group-hover:rotate-0 transition-transform">
+            <HelpCircle className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-white tracking-tight leading-none mb-1.5">Clarification Needed</h3>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 bg-white/20 text-white text-[7px] font-black uppercase rounded-md border border-white/10 backdrop-blur-sm tracking-widest">Triage Mode</span>
+              <span className="w-1 h-1 rounded-full bg-white/30" />
+              <span className="text-[7px] font-bold text-white/60 uppercase tracking-widest">{isLatest ? 'Pending' : 'Answered'}</span>
             </div>
-         )}
+          </div>
+        </div>
+
+        <p className="text-white/90 mb-5 leading-relaxed font-bold text-sm relative z-10 italic">"{report.context}"</p>
+
+        <div className="space-y-2.5 relative z-10">
+          {report.questions && report.questions.map((q, i) => (
+            <div key={i} className="bg-white/5 backdrop-blur-md p-3 rounded-xl border border-white/10 text-white font-bold shadow-lg flex gap-3 hover:bg-white/10 hover:border-white/30 transition-all group/item cursor-pointer">
+              <span className="flex-shrink-0 w-7 h-7 bg-white/10 text-white rounded-lg flex items-center justify-center text-[10px] font-black border border-white/10 group-hover/item:bg-white group-hover/item:text-brand-600 transition-all">{i + 1}</span>
+              <span className="mt-1 text-xs group-hover/item:translate-x-1 transition-transform">{q}</span>
+            </div>
+          ))}
+        </div>
+
+        {isLatest && (
+          <div className="mt-5 flex items-center gap-3 px-1 relative z-10">
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+              <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+              <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" />
+            </div>
+            <p className="text-[8px] text-white/50 font-black uppercase tracking-widest">Awaiting response</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -751,13 +751,13 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <div className="relative">
                 <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-orange-500 rounded-full opacity-50" />
                 <p className="text-navy-800 text-sm leading-relaxed font-semibold italic">"{report.message}"</p>
               </div>
-              
+
               <div className="bg-navy-50/50 p-4 rounded-xl border border-navy-100/50 flex items-start gap-3">
                 <Brain className="h-4 w-4 text-navy-400 mt-0.5 shrink-0" />
                 <div>
@@ -768,17 +768,17 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
             </div>
           </div>
 
-          <FeedbackSection 
-          feedbackGiven={feedbackGiven} 
-          onFeedback={handleFeedback} 
-          onNegativeClick={() => setIsModalOpen(true)}
-        />
+          <FeedbackSection
+            feedbackGiven={feedbackGiven}
+            onFeedback={handleFeedback}
+            onNegativeClick={() => setIsModalOpen(true)}
+          />
 
-        <FeedbackModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleNegativeSubmit} 
-        />
+          <FeedbackModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSubmit={handleNegativeSubmit}
+          />
 
           <div className="px-5 py-4 bg-orange-50/30 border-t border-orange-100/40 flex items-start gap-4">
             <div className="p-1.5 bg-white rounded-lg border border-orange-100/50 shadow-sm">
@@ -797,10 +797,10 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
         {audioUrl && (
           <div className="px-5 pt-5">
             <div className="bg-navy-50/50 rounded-xl p-3 flex items-center gap-4 border border-navy-100/40 backdrop-blur-sm">
-                 <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-600/30 group cursor-pointer hover:scale-105 transition-transform">
-                    <Volume2 size={18} className="group-hover:animate-pulse" />
-                 </div>
-                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-8" />
+              <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-600/30 group cursor-pointer hover:scale-105 transition-transform">
+                <Volume2 size={18} className="group-hover:animate-pulse" />
+              </div>
+              <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-8" />
             </div>
           </div>
         )}
@@ -825,7 +825,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                 </div>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleDownload}
               disabled={downloading}
               className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-navy-900 text-[11px] font-bold text-white hover:bg-teal-600 transition-all shadow-lg shadow-navy-900/10 active:scale-95 disabled:opacity-50"
@@ -838,7 +838,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               {downloading ? 'Preparing...' : 'Download Results'}
             </button>
           </div>
-          
+
           <div className="flex flex-wrap gap-2 mb-4">
             {report.observations?.map((obs, i) => (
               <span key={i} className="px-3 py-1.5 bg-white text-teal-800 text-[10px] font-bold rounded-lg border border-teal-100 shadow-sm hover:border-teal-300 hover:shadow-md transition-all cursor-default flex items-center gap-2">
@@ -848,13 +848,13 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
             ))}
           </div>
 
-            <div className="space-y-3">
-              <div className="relative">
-                <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-teal-500 rounded-full opacity-50" />
-                <p className="text-navy-800 text-[11px] leading-relaxed font-semibold italic">"{report.health_information || report.summary}"</p>
-              </div>
-              {report.confidence_level && <ConfidenceBar score={report.confidence_level} />}
+          <div className="space-y-3">
+            <div className="relative">
+              <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-teal-500 rounded-full opacity-50" />
+              <p className="text-navy-800 text-[11px] leading-relaxed font-semibold italic">"{report.health_information || report.summary}"</p>
             </div>
+            {report.confidence_level && <ConfidenceBar score={report.confidence_level} />}
+          </div>
         </div>
 
         <div className="p-5 space-y-6">
@@ -891,16 +891,16 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           </div>
         </div>
 
-        <FeedbackSection 
-          feedbackGiven={feedbackGiven} 
-          onFeedback={handleFeedback} 
+        <FeedbackSection
+          feedbackGiven={feedbackGiven}
+          onFeedback={handleFeedback}
           onNegativeClick={() => setIsModalOpen(true)}
         />
 
-        <FeedbackModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleNegativeSubmit} 
+        <FeedbackModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleNegativeSubmit}
         />
 
         <div className="px-5 py-4 bg-navy-50/30 border-t border-navy-100/40 flex items-start gap-4">
@@ -917,7 +917,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
 
   // Handle Legacy or Error Formats
   const mainContent = report?.summary || report?.health_information || report?.interpretation || report?.message || report?.context || report?.analysis || report?.reasoning_brief;
-  
+
   if (!report || !mainContent) {
     return (
       <div className="bg-white rounded-[2rem] p-8 shadow-premium border border-navy-100/60 animate-fade-in flex flex-col md:flex-row items-start md:items-center gap-6 prose prose-navy max-w-none">
@@ -930,17 +930,17 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           </ReactMarkdown>
         </div>
         <div className="ml-auto shrink-0 pt-4 md:pt-0">
-          <FeedbackSection 
-            feedbackGiven={feedbackGiven} 
-            onFeedback={handleFeedback} 
+          <FeedbackSection
+            feedbackGiven={feedbackGiven}
+            onFeedback={handleFeedback}
             onNegativeClick={() => setIsModalOpen(true)}
           />
         </div>
 
-        <FeedbackModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleNegativeSubmit} 
+        <FeedbackModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleNegativeSubmit}
         />
       </div>
     );
@@ -961,16 +961,16 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
   return (
     <div className="bg-white rounded-2xl shadow-premium border border-navy-100/60 overflow-hidden max-w-xl animate-slide-up hover:shadow-xl transition-all duration-500">
       {audioUrl && (
-          <div className="px-5 pt-5">
-            <div className="bg-navy-50/50 rounded-xl p-3 flex items-center gap-4 border border-navy-100/40 backdrop-blur-sm">
-                 <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-600/30 group cursor-pointer hover:scale-105 transition-transform">
-                    <Volume2 size={18} className="group-hover:animate-pulse" />
-                 </div>
-                 <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-8" />
+        <div className="px-5 pt-5">
+          <div className="bg-navy-50/50 rounded-xl p-3 flex items-center gap-4 border border-navy-100/40 backdrop-blur-sm">
+            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-600/30 group cursor-pointer hover:scale-105 transition-transform">
+              <Volume2 size={18} className="group-hover:animate-pulse" />
             </div>
+            <audio controls src={`${API_URL}${audioUrl}`} className="w-full h-8" />
           </div>
-        )}
-      
+        </div>
+      )}
+
       {/* Header */}
       <div className="p-5 border-b border-navy-50/50 bg-gradient-to-br from-brand-50/30 via-white to-transparent">
         <div className="flex flex-col md:flex-row items-start justify-between gap-4 mb-5">
@@ -987,7 +987,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleDownload}
             disabled={downloading}
             className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-navy-900 text-[11px] font-bold text-white hover:bg-brand-600 transition-all shadow-lg shadow-navy-900/10 active:scale-95 disabled:opacity-50"
@@ -1006,7 +1006,7 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
             <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
             <p className="text-navy-800 text-xs leading-relaxed font-semibold italic">"{reportSummary}"</p>
           </div>
-          
+
           {report.health_information && reportSummary !== report.health_information && (
             <div className="relative mt-3 pt-3 border-t border-navy-50/50">
               <div className="absolute -left-3 top-3 bottom-0 w-0.5 bg-brand-500 rounded-full opacity-50" />
@@ -1015,42 +1015,42 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
               </div>
             </div>
           )}
-          
+
           {confidence > 0 && <ConfidenceBar score={confidence} reason={uncertainty} />}
         </div>
       </div>
 
       {/* Recommendations Grid */}
       <div className="p-5 space-y-5">
-        
+
         {/* Specialist Suggestion */}
         {specialist && (
-            <div className="bg-teal-50/50 rounded-xl p-3 border border-teal-100/50 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-                <div className="absolute -top-3 -right-3 p-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12 group-hover:rotate-0 duration-500">
-                  <UserIcon size={60} />
-                </div>
-                <div className="flex items-start gap-3 relative z-10">
-                    <div className="p-2 bg-teal-100 rounded-lg text-teal-600 shadow-sm border border-teal-200/50">
-                        <UserIcon className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="text-teal-900 font-black text-[8px] uppercase tracking-wider">Specialist</h4>
-                          <span className="px-1.5 py-0.5 bg-white text-teal-600 text-[7px] font-black uppercase rounded border border-teal-200 tracking-widest shadow-sm">
-                              {specialist.urgency}
-                          </span>
-                        </div>
-                        <p className="text-teal-900 text-xs font-bold mb-0.5">{specialist.type}</p>
-                        <p className="text-teal-700 text-[10px] font-medium leading-relaxed">{specialist.reason}</p>
-                    </div>
-                </div>
+          <div className="bg-teal-50/50 rounded-xl p-3 border border-teal-100/50 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+            <div className="absolute -top-3 -right-3 p-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12 group-hover:rotate-0 duration-500">
+              <UserIcon size={60} />
             </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="p-2 bg-teal-100 rounded-lg text-teal-600 shadow-sm border border-teal-200/50">
+                <UserIcon className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="text-teal-900 font-black text-[8px] uppercase tracking-wider">Specialist</h4>
+                  <span className="px-1.5 py-0.5 bg-white text-teal-600 text-[7px] font-black uppercase rounded border border-teal-200 tracking-widest shadow-sm">
+                    {specialist.urgency}
+                  </span>
+                </div>
+                <p className="text-teal-900 text-xs font-bold mb-0.5">{specialist.type}</p>
+                <p className="text-teal-700 text-[10px] font-medium leading-relaxed">{specialist.reason}</p>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Explainability Panel */}
         {explanation.reasoning && (
           <div className="bg-navy-50/50 rounded-xl border border-navy-100/50 overflow-hidden group">
-            <button 
+            <button
               onClick={() => setShowExplanation(!showExplanation)}
               className="w-full flex items-center justify-between p-3 text-left hover:bg-white transition-colors"
             >
@@ -1067,10 +1067,10 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                 "w-5 h-5 rounded-full flex items-center justify-center transition-all border border-navy-100 shadow-sm",
                 showExplanation ? "bg-brand-600 text-white border-brand-600 rotate-180" : "bg-white text-navy-400 hover:text-brand-600"
               )}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
               </div>
             </button>
-            
+
             {showExplanation && (
               <div className="px-3 pb-3 animate-fade-in">
                 <div className="h-px w-full bg-navy-100/50 mb-3" />
@@ -1081,16 +1081,16 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {explanation.history_factor && (
-                       <div className="p-2 bg-white rounded-lg border border-navy-100 shadow-sm">
-                         <h5 className="text-[7px] font-black text-navy-400 uppercase tracking-widest mb-0.5">History Factor</h5>
-                         <p className="text-navy-800 text-[9px] font-bold leading-relaxed">{explanation.history_factor}</p>
-                       </div>
+                      <div className="p-2 bg-white rounded-lg border border-navy-100 shadow-sm">
+                        <h5 className="text-[7px] font-black text-navy-400 uppercase tracking-widest mb-0.5">History Factor</h5>
+                        <p className="text-navy-800 text-[9px] font-bold leading-relaxed">{explanation.history_factor}</p>
+                      </div>
                     )}
                     {explanation.profile_factor && (
-                       <div className="p-2 bg-white rounded-lg border border-navy-100 shadow-sm">
-                         <h5 className="text-[7px] font-black text-navy-400 uppercase tracking-widest mb-0.5">Profile Factor</h5>
-                         <p className="text-navy-800 text-[9px] font-bold leading-relaxed">{explanation.profile_factor}</p>
-                       </div>
+                      <div className="p-2 bg-white rounded-lg border border-navy-100 shadow-sm">
+                        <h5 className="text-[7px] font-black text-navy-400 uppercase tracking-widest mb-0.5">Profile Factor</h5>
+                        <p className="text-navy-800 text-[9px] font-bold leading-relaxed">{explanation.profile_factor}</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1103,13 +1103,13 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           {/* Immediate Action */}
           {immediate_action && (
             <div className="col-span-1 md:col-span-2 bg-brand-50/50 rounded-2xl p-4 border border-brand-100/50 flex items-start gap-4 group hover:shadow-lg transition-all">
-               <div className="p-2.5 bg-brand-100 rounded-xl text-brand-600 shadow-sm border border-brand-200/50">
-                  <ShieldCheck className="h-4 w-4" />
-               </div>
-               <div>
-                  <h4 className="text-brand-900 font-black text-[9px] uppercase tracking-wider mb-1">Priority Action</h4>
-                  <p className="text-brand-800 text-sm font-bold leading-relaxed">{immediate_action}</p>
-               </div>
+              <div className="p-2.5 bg-brand-100 rounded-xl text-brand-600 shadow-sm border border-brand-200/50">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="text-brand-900 font-black text-[9px] uppercase tracking-wider mb-1">Priority Action</h4>
+                <p className="text-brand-800 text-sm font-bold leading-relaxed">{immediate_action}</p>
+              </div>
             </div>
           )}
 
@@ -1179,38 +1179,38 @@ const ReportCard = ({ data, report: reportProp, audioUrl, reportId }) => {
           {/* Trusted Sources */}
           {report.knowledge_sources && report.knowledge_sources.length > 0 && (
             <div className="col-span-1 md:col-span-2">
-               <h4 className="text-[10px] font-black text-navy-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2.5">
+              <h4 className="text-[10px] font-black text-navy-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2.5">
                 <div className="h-px w-6 bg-navy-100" />
                 Verified Clinical Sources
               </h4>
               <div className="grid gap-3 md:grid-cols-2">
-                  {report.knowledge_sources.map((src, idx) => (
-                      <div key={idx} className="bg-navy-50/50 rounded-xl p-4 border border-navy-100/50 hover:bg-white hover:shadow-md transition-all group">
-                          <div className="flex items-center gap-2.5 mb-1.5">
-                            <div className="p-1 bg-white rounded-lg border border-navy-100 group-hover:border-brand-200">
-                              <FileText className="h-3 w-3 text-brand-600" />
-                            </div>
-                            <p className="text-[10px] font-black text-navy-900 uppercase tracking-wider">{src.source || "Medical Publication"}</p>
-                          </div>
-                          <p className="text-navy-600 text-[11px] font-bold leading-relaxed">{src.description}</p>
+                {report.knowledge_sources.map((src, idx) => (
+                  <div key={idx} className="bg-navy-50/50 rounded-xl p-4 border border-navy-100/50 hover:bg-white hover:shadow-md transition-all group">
+                    <div className="flex items-center gap-2.5 mb-1.5">
+                      <div className="p-1 bg-white rounded-lg border border-navy-100 group-hover:border-brand-200">
+                        <FileText className="h-3 w-3 text-brand-600" />
                       </div>
-                  ))}
+                      <p className="text-[10px] font-black text-navy-900 uppercase tracking-wider">{src.source || "Medical Publication"}</p>
+                    </div>
+                    <p className="text-navy-600 text-[11px] font-bold leading-relaxed">{src.description}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      <FeedbackSection 
-        feedbackGiven={feedbackGiven} 
-        onFeedback={handleFeedback} 
+      <FeedbackSection
+        feedbackGiven={feedbackGiven}
+        onFeedback={handleFeedback}
         onNegativeClick={() => setIsModalOpen(true)}
       />
 
-      <FeedbackModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSubmit={handleNegativeSubmit} 
+      <FeedbackModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleNegativeSubmit}
       />
 
       {/* Disclaimer Footer */}

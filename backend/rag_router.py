@@ -530,9 +530,19 @@ class RAGRouter:
         
         # Rule 1: Max 1 follow-up per interaction sequence
         if history:
-            # Check last 3 interactions for clarification questions
-            for interaction in history[-3:]:
-                if interaction.get('type') == 'clarification_questions':
+            # Check last 4 interactions for clarification questions already asked.
+            # History items are {"role": ..., "content": ...} dicts — NOT type-keyed objects.
+            # A clarification response is stored as a JSON string containing "clarification_questions".
+            for interaction in history[-4:]:
+                role = interaction.get('role', '')
+                content = interaction.get('content', '')
+                # Detect assistant clarification responses whether stored as JSON string or plain
+                if role == 'assistant' and (
+                    '"type": "clarification_questions"' in content
+                    or "clarification_questions" in content
+                    or "how long have you been experiencing" in content.lower()
+                    or "how long has this been" in content.lower()
+                ):
                     return False  # Already asked recently, don't loop
         
         # Rule 2: NEVER ask for disease symptom queries (they are informational)

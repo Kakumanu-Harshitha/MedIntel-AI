@@ -51,7 +51,6 @@ async def create_or_update_profile(
 
     return profile  
 
-from debug_utils import log_debug_error
 
 @router.get("/", response_model=ProfileOut, response_model_exclude_none=True)
 def get_profile(
@@ -78,5 +77,5 @@ def get_profile(
 
         return profile
     except Exception as e:
-        log_debug_error("get_profile", e)
+        print(f"[get_profile error] {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

@@ -212,16 +212,22 @@ async def handle_multimodal_query(
     # 7. Assemble Inputs and get LLM response
     final_prompt = " ".join(prompt_parts) # Still used for storing simple history
     history = mongo_memory.get_user_memory(user_id_str)
-    
+
+    # ── CONTEXT BRIDGE ────────────────────────────────────────────────────────
+    # DEPRECATED: Context Bridge logic was moved to llm_service.py's Session Resolver.
+    _bridge_active = False
+    # ─────────────────────────────────────────────────────────────────────────
+
     inputs = {
         "text_query": text_query,
         "transcribed_text": transcribed_text,
         "image_caption": image_caption,
         "image_text": image_text,
         "report_text": report_text,
-        "user_confirmation": user_confirmation
+        "user_confirmation": user_confirmation,
+        "bridge_active": _bridge_active,   # passed to pipeline for fast-path
     }
-    
+
     # Call the new Google-Level pipeline
     text_response = await llm_service.run_clinical_analysis(profile_dict, history, inputs, request)
 

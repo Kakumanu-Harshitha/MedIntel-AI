@@ -22,6 +22,12 @@ try:
             print("✅ RAG Embedding Model loaded.")
         return _EMBEDDING_MODEL
 
+    # --- COLD START FIX: Eagerly load model at import time ---
+    # This prevents the 20–45s delay on the first real request.
+    print("⏳ Pre-loading embedding model at startup...")
+    get_embedding_model()
+    print("✅ Embedding model pre-loaded.")
+
     # 2. Initialize Pinecone
     api_key = os.getenv("PINECONE_API_KEY")
     index_name = os.getenv("PINECONE_INDEX", "health-assistant-medical-knowledge")

@@ -40,11 +40,16 @@ def speech_to_text(audio_file: UploadFile) -> str:
         print(f"❌ ERROR: Groq STT API call failed. Error: {e}")
         return f"[stt_error] {e}"
 
-def text_to_speech(text: str, output_dir: str = "backend/static/audio") -> str:
+def text_to_speech(text: str, output_dir: str = None) -> str:
     """
     Converts text to speech using gTTS and returns the filename.
     """
     try:
+        if output_dir is None:
+            # Use absolute path to ensure correct location regardless of CWD
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            output_dir = os.path.join(base_dir, "static", "audio")
+
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         

@@ -68,6 +68,30 @@ async def call_llm_with_fallback(messages: list[dict], response_format: dict | N
         print(f"❌ LLM Error ({current_model}): {e}")
         raise e
 
+async def get_streaming_llm_response(system_prompt: str):
+    """
+    Yields chunks from a streaming LLM response.
+    """
+    if not client:
+        yield "LLM service is unavailable."
+        return
+
+    messages = [{"role": "system", "content": system_prompt}]
+    try:
+        stream = await client.chat.completions.create(
+            messages=messages,
+            model=LLM_MODEL,
+            stream=True
+        )
+        async for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
+    except Exception as e:
+        print(f"❌ Streaming LLM Error: {e}")
+        yield "An error occurred while generating the response."
+
+
 # --- Symptom Fallback Dictionary (CRITICAL SAFETY FEATURE) ---
 # This ensures symptom queries NEVER fail, even if RAG is down or data is missing
 SYMPTOM_FALLBACKS = {
@@ -242,8 +266,32 @@ def analyze_history_trends(history: list[dict], current_symptoms: str) -> str:
 
 # --- 7-Core Assessment Pipeline Prompts ---
 
+PROMPT_INTENT_CLASSIFIER = """
+You are an intent classifier for a medical AI assistant.
+
+Classify the user's message into EXACTLY ONE of:
+  MEDICAL  → user mentions symptoms, health issues, medical questions, or body-related concerns
+  GENERAL  → casual conversation, greetings, jokes, or anything unrelated to health
+
+EXAMPLES:
+  MEDICAL: "I have fever", "headache for 2 days", "feeling nausea", "what is diabetes"
+  GENERAL: "hi", "tell me a joke", "what are you doing", "who are you"
+
+USER MESSAGE:
+"{message}"
+
+OUTPUT: (one word only, no punctuation)
+"""
+
+# Strict fallback for non-medical inputs — no chatbot behaviour
+HEALTH_ONLY_REDIRECT = (
+    "I am an AI Health Assistant. "
+    "I can help with symptoms, conditions, and medical guidance. "
+    "Please describe your health concern."
+)
+
 PROMPT_CONTROLLER = """
-You are a medical assessment controller. Your goal is to decide if a query needs follow-up questions for a better clinical assessment.
+You are a medical assessment controller. Your goal is to decide if a query needs a follow-up question for a better clinical assessment.
 
 Your task is to:
 1. Determine whether the user query is informational (e.g., "What is Wilson disease?") or symptom-based (e.g., "I have a headache").
@@ -263,14 +311,14 @@ Your task is to:
    - "Symptoms of [disease]" queries.
 
 3. Follow-up Guidelines:
-   - Ask AT MOST 2 targeted questions.
-   - Questions should be easy for a patient to answer (e.g., "How long has this been happening?", "Is it worse at night?").
+-   Ask EXACTLY 1 targeted question.
+-   Prefer duration if missing (e.g., "How long has this been happening?"). Otherwise ask for one missing key symptom detail.
 
 OUTPUT FORMAT (JSON):
 {
   "is_informational": boolean,
   "needs_clarification": boolean,
-  "questions": ["Question 1", "Question 2"] (only if needs_clarification is true),
+  "questions": ["One short targeted question"] (only if needs_clarification is true),
   "detected_intent": "informational" | "symptom_based"
 }
 """
@@ -553,6 +601,13 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     
     # Ensure combined_input has at least a placeholder if report_text exists but OCR failed
     combined_input = f"{user_text} {voice_text} {image_desc} {report_text}".strip()
+    
+    # --- Context Bridge: now handled upstream in query_service.py ---
+    # The merged text_query (e.g. "getting fever 5 days") is already in inputs["text_query"]
+    # and combined_input was built from it above. Just read the flag.
+    _bridge_merged = bool(inputs.get("bridge_active", False))
+    if _bridge_merged:
+        print(f"⚡ Bridge active (from query_service) → combined_input: {combined_input!r}")
     if not combined_input and report_text:
         combined_input = "[Medical Report Analysis Requested]"
         
@@ -585,19 +640,138 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     safety_result = guardrails.check_safety(combined_input)
     if not safety_result["is_safe"]:
         return json.dumps(safety_result["response"])
+    skip_intent_detection = False
+    
+    # --- STEP 2.1: SESSION RESOLVER (FOLLOW-UP DETECTOR) ---
+    if not is_report_analysis and not is_image_analysis and user_text.strip():
+        try:
+            from clinical_memory import session_repo, ClinicalState
+            _skey = str(profile.get("user_id", "")) or None
+            session = session_repo.get_or_create_session(_skey)
+            prev_state = session.state
+            
+            # --- SESSION RESET (Moved from Step 3 to prevent state bleed into Session Resolver) ---
+            # Find last assistant message for context
+            last_message_str = ""
+            if history:
+                for m in reversed(history):
+                    if m.get("role") == "assistant":
+                        last_message_str = m.get("content", "").lower()
+                        break
+
+            # A session is considered "answering a clarification" if the last message was a question
+            _is_answering_clarification = "how long" in last_message_str or "question" in last_message_str
+            
+            # A session is COMPLETE if either:
+            # 1. It successfully collected both symptoms and duration
+            # 2. The system already provided a final health report (e.g., from a symptom shortcut)
+            _prev_has_data = bool(prev_state.symptoms and prev_state.duration)
+            _prev_was_report = "since this is continuing" in last_message_str or "disclaimer" in last_message_str or "recommend" in last_message_str or "not a diagnosis" in last_message_str
+
+            _prev_complete = _prev_has_data or _prev_was_report
+
+            if _prev_complete and not _is_answering_clarification:
+                session.state = ClinicalState()
+                prev_state = session.state
+                session_repo.save_session(session)
+                print(f"🔄 SESSION RESET: Cleared previous session state. (was_report={_prev_was_report})")
+            # --------------------------------------------------------------------------------------
+            
+            import re
+            DURATION_PATTERN = r"\b(\d+)\s*(day|days|week|weeks|month|months|hour|hours|year|years|since\s+\w+|yesterday|last\s+\w+|a\s+few\s+days|this\s+(morning|evening|week))\b"
+            _short_ans_match = re.search(DURATION_PATTERN, user_text.lower())
+            _is_short_input = len(user_text.strip().split()) <= 4
+            
+            if session.state.pending_field and _is_short_input:
+                print(f"🔄 Follow-Up Resolver: processing pending_field '{session.state.pending_field}'")
+                field = session.state.pending_field
+                
+                if field == "duration":
+                    session.state.duration = user_text.strip()
+                elif field == "symptoms":
+                    session.state.symptoms.append(user_text.strip())
+                
+                # MERGE INPUT SO RAG GETS THE FULL QUERY
+                _syms_str = " and ".join(session.state.symptoms) if session.state.symptoms else ""
+                if _syms_str:
+                    combined_input = f"{_syms_str} {user_text.strip()}"
+                else:
+                    combined_input = user_text.strip()
+                
+                session.state.pending_field = None
+                session_repo.save_session(session)
+                skip_intent_detection = True
+                _bridge_merged = True
+                print(f"✅ State updated directly. Bypassing intent detection. Merged: {combined_input}")
+            elif _short_ans_match and session.state.symptoms and _is_short_input:
+                print("🛡 Hardening: Duration regex matched. Updating directly.")
+                session.state.duration = user_text.strip()
+                session.state.pending_field = None
+                
+                # MERGE INPUT SO RAG GETS THE FULL QUERY
+                _syms_str = " and ".join(session.state.symptoms)
+                combined_input = f"{_syms_str} {user_text.strip()}"
+                
+                session_repo.save_session(session)
+                skip_intent_detection = True
+                _bridge_merged = True
+                print(f"✅ Quick duration detected. Bypassing intent detection. Merged: {combined_input}")
+        except Exception as _ime:
+            print(f"⚠️ Follow-Up Resolver failed/skipped ({_ime})")
+
+    # --- STEP 2.2: MEDICAL / GENERAL INTENT GATE ---
+    # Skip for multimodal inputs — images/reports/voice are always health-related
+    _is_text_only = not (is_report_analysis or is_image_analysis or voice_text)
+    if _is_text_only and combined_input and not skip_intent_detection:
+        try:
+            _intent_raw = await call_llm_with_fallback(
+                messages=[{"role": "user", "content": PROMPT_INTENT_CLASSIFIER.format(message=combined_input)}],
+                use_primary=False  # cheap single-word call
+            )
+            _intent = _intent_raw.strip().upper().split()[0] if _intent_raw.strip() else "MEDICAL"
+            print(f"🧠 Intent Gate: {combined_input[:50]!r} → {_intent}")
+        except Exception as _ie:
+            print(f"⚠️ Intent gate failed ({_ie}), defaulting to MEDICAL")
+            _intent = "MEDICAL"
+
+        if _intent == "GENERAL":
+            # Strict medical-only mode: always return the same redirect — never engage casually
+            print(f"🚫 Non-medical input blocked: {combined_input[:60]!r}")
+            return json.dumps({"type": "chat_message", "message": HEALTH_ONLY_REDIRECT})
+
 
     # --- STEP 2.5: SYMPTOM SHORTCUT CHECK (OPTIMIZATION) ---
     # Check if this is a common symptom query - if yes, skip LLM intent detection and go straight to fallback
     # This improves response time and reduces API costs for common queries
     query_lower = combined_input.lower()
-    
+
     # Skip symptom shortcut if in report or image analysis mode
     if is_report_analysis or is_image_analysis:
-        print(f"⏭️ Skipping symptom shortcut for {'report' if is_report_analysis else 'image'} analysis")
+        print(f"Skipping symptom shortcut for {'report' if is_report_analysis else 'image'} analysis")
+        symptom_shortcut = None
+    elif _bridge_merged:
+        # CRITICAL: When a follow-up answer was merged (e.g. "headache fever from yesterday"),
+        # the shortcut would match ONE symptom and return a generic single-symptom response,
+        # ignoring the other symptoms and the duration context.
+        # Always bypass the shortcut for merged inputs and let RAG give a FULL combined assessment.
+        print("Bridge merged → skipping symptom shortcut to ensure full multi-symptom RAG response.")
         symptom_shortcut = None
     else:
         # Check for direct symptom mentions
         symptom_shortcut = get_symptom_fallback(combined_input)
+        
+        # MULTI-SYMPTOM CHECK: if more than one shortcut-eligible symptom is present,
+        # skip the shortcut — RAG will give a properly combined multi-symptom analysis.
+        if symptom_shortcut:
+            import re as _re
+            _matched_shortcuts = []
+            _qn = _re.sub(r'[^\w\s]', '', query_lower).replace("head ache", "headache").replace("stomach ache", "stomach pain").replace("back ache", "back pain")
+            for _sname in SYMPTOM_FALLBACKS.keys():
+                if _re.search(rf"\b{_re.escape(_sname)}\b", _qn):
+                    _matched_shortcuts.append(_sname)
+            if len(_matched_shortcuts) > 1:
+                print(f"Multiple symptoms in query {_matched_shortcuts} → skipping shortcut for full RAG response.")
+                symptom_shortcut = None
     
     # Also check for "symptoms of/for [disease]" pattern - these should NOT use shortcut
     is_disease_symptom_query = any(pattern in query_lower for pattern in [
@@ -631,20 +805,103 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     if symptom_shortcut and not is_disease_symptom_query and user_confirmation != "yes":
         print(f"⚡ SYMPTOM SHORTCUT: Bypassing LLM for common symptom: {combined_input[:50]}...")
         
-        # Check if we should ask a follow-up even for shortcut symptoms (e.g., if very brief)
+        # Use the conversation controller: update state from message then decide READY vs follow-up.
+        # FAST PATH: if context bridge already merged a duration answer, we know state is complete.
         intent_enum = QueryIntent.SYMPTOM_QUERY
-        if rag_router.should_ask_follow_up(combined_input, intent_enum, history):
-             await audit_logger.log_event(
+        if _bridge_merged:
+            print("⚡ Bridge merged → skipping controller, state is READY")
+            is_ready = True
+            follow_up_q = None
+        else:
+            try:
+                from clinical_memory import state_manager, session_repo, ClinicalState
+                # Build conversation history strings for the controller
+                recent_history_strs = [m.get("content", "") for m in history[-4:]] if history else []
+                last_question_str = None
+                if history:
+                    for m in reversed(history):
+                        if m.get("role") == "assistant" and ("how long" in m.get("content", "").lower() or "question" in m.get("content", "").lower()):
+                            last_question_str = m.get("content", "")
+                            break
+
+                # Step 1: Load persisted session using user_id so state survives across turns
+                # CRITICAL: using user_id as session_id keeps symptoms from the previous turn
+                _session_key = str(profile.get("user_id", "")) or None
+                session = session_repo.get_or_create_session(_session_key)
+                prev_state = session.state  # snapshot before update
+
+                # 🔄 SESSION RESET: if the previous conversation was complete (has symptoms+duration)
+                # AND we are NOT answering a clarification question, this is a fresh conversation.
+                # Reset so old symptoms don't bleed into the new session.
+                _is_answering_clarification = bool(last_question_str)
+                _prev_complete = bool(prev_state.symptoms and prev_state.duration)
+                if _prev_complete and not _is_answering_clarification:
+                    print("🔄 Session reset: new symptom conversation detected, clearing old state")
+                    session.state = ClinicalState()
+                    prev_state = session.state
+
+                print(f"📋 Loaded prev state: symptoms={prev_state.symptoms}, duration={prev_state.duration}")
+
+                orchestration_result = await state_manager.orchestrate_state(
+                    prev_state,
+                    combined_input,
+                    last_question=last_question_str
+                )
+
+                updated_state = orchestration_result["state"]
+                route = orchestration_result["route"]
+                confidence = orchestration_result["confidence"]
+
+                print(f"📋 Orchestrator output: state={updated_state.dict()}, route={route}")
+
+                session.state = updated_state
+                session_repo.save_session(session)
+
+                is_ready = (route != "follow_up")
+
+                if not is_ready:
+                    # Decide follow up question
+                    field_missing = updated_state.pending_field
+                    
+                    # LLM sometimes fails to set pending_field, manually infer:
+                    if not field_missing:
+                        if not updated_state.duration:
+                            field_missing = "duration"
+                            updated_state.pending_field = "duration"
+                        else:
+                            field_missing = "symptoms"
+                            updated_state.pending_field = "symptoms"
+                            
+                    if field_missing == "duration":
+                        follow_up_q = "How long have you been experiencing this?"
+                    elif field_missing == "symptoms":
+                        follow_up_q = "What symptoms are you experiencing?"
+                    else:
+                        follow_up_q = "Can you provide more details about how you are feeling?"
+                    
+                    session.last_question = follow_up_q
+                    session.state = updated_state
+                    session_repo.save_session(session)
+                else:
+                    follow_up_q = None
+
+            except Exception as _ctrl_err:
+                print(f"⚠️ Controller failed ({_ctrl_err}), falling back to rag_router")
+                is_ready = not rag_router.should_ask_follow_up(combined_input, intent_enum, history)
+                follow_up_q = "How long have you been experiencing this?"
+
+        if not is_ready:
+            await audit_logger.log_event(
                 action="AI_QUERY",
                 status="SUCCESS",
                 user_id=user_id,
                 request=request,
                 metadata={"type": "clarification_triggered", "symptom": combined_input[:50]}
-             )
-             return json.dumps({
+            )
+            return json.dumps({
                 "type": "clarification_questions",
                 "context": f"I can certainly help you with information about {combined_input}. To be more specific:",
-                "questions": ["How long have you been experiencing this?", "Are there any other symptoms accompanying it?"],
+                "questions": [follow_up_q],
                 "requires_confirmation": True
             })
 
@@ -719,48 +976,61 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
             "disclaimer": "This is a life-safety override. Seek professional medical help immediately."
         })
 
-    # --- SMALL TALK INTERCEPT ---
+    # --- SMALL TALK INTERCEPT (Strict Medical-Only Mode) ---
     if intent_enum == QueryIntent.SMALL_TALK:
-        print(f"💬 SMALL_TALK DETECTED: {combined_input[:50]}...")
-        # Determine specific greeting/farewell/gratitude for a more natural response
-        query_lower = combined_input.lower()
-        message = "Hi! 👋 How can I help you today?"
-        
-        if any(g in query_lower for g in rag_router.GREETINGS):
-            message = "Hi! 👋 How can I help you today?"
-        elif any(f in query_lower for f in rag_router.FAREWELLS):
-            message = "Goodbye! 👋 Take care and stay healthy!"
-        elif any(g in query_lower for g in rag_router.GRATITUDE):
-            message = "You're very welcome! 😊 Let me know if you have any other health questions."
-        elif any(c in query_lower for c in rag_router.CASUAL_REPLIES):
-            message = "Got it! 👍 Let me know if you need any medical assistance or report analysis."
-            
-        return json.dumps({
-            "type": "chat_message",
-            "message": message
-        })
+        print(f"🚫 SMALL_TALK blocked (strict mode): {combined_input[:50]}...")
+        return json.dumps({"type": "chat_message", "message": HEALTH_ONLY_REDIRECT})
 
-    # Also run LLM controller for clarification decision (but use router intent)
+    # Also run LLM controller for clarification decision and STATE UPDATE
     if is_report_analysis:
         # Skip controller for report analysis - go straight to retrieval
         ctrl = {"needs_clarification": False, "detected_intent": detected_intent}
     else:
-        # STEP 3: Use call_llm_with_fallback with use_primary=False to save tokens on primary model
-        ctrl_content = await call_llm_with_fallback(
-            messages=[
-                {"role": "system", "content": PROMPT_CONTROLLER},
-                {"role": "user", "content": f"User Input: {combined_input}"}
-            ],
-            response_format={"type": "json_object"},
-            use_primary=False  # Intent detection is simple, use smaller model by default
-        )
+        from clinical_memory import state_manager, session_repo, ClinicalState
+        
+        # Load persisted session using user_id
+        _session_key = str(profile.get("user_id", "")) or None
+        session = session_repo.get_or_create_session(_session_key)
+        prev_state = session.state
+
+        # Find last assistant question for context
+        last_question_str = None
+        if history:
+            for m in reversed(history):
+                if m.get("role") == "assistant" and ("how long" in m.get("content", "").lower() or "question" in m.get("content", "").lower()):
+                    last_question_str = m.get("content", "")
+                    break
+
         try:
-            ctrl = json.loads(ctrl_content)
-            # Override LLM intent with router intent (router is more reliable)
-            ctrl["detected_intent"] = detected_intent
-            print(f"🎯 Final intent: {detected_intent}")
-        except json.JSONDecodeError:
-            print(f"⚠️ Controller JSON Error: {ctrl_content}")
+            # Sync ALL medical conditions through the Medical Orchestrator
+            orchestration_result = await state_manager.orchestrate_state(
+                prev_state, combined_input, last_question=last_question_str
+            )
+            updated_state = orchestration_result["state"]
+            route = orchestration_result["route"]
+            
+            session.state = updated_state
+            
+            # Map route to the legacy ctrl object format
+            needs_clarif = (route == "follow_up")
+            qs = []
+            if needs_clarif:
+                if updated_state.pending_field == "duration":
+                    qs = ["How long have you been experiencing this?"]
+                else:
+                    qs = ["What symptoms are you experiencing?"]
+                session.last_question = qs[0]
+            
+            session_repo.save_session(session)
+            
+            ctrl = {
+                "needs_clarification": needs_clarif,
+                "detected_intent": detected_intent,
+                "questions": qs
+            }
+            print(f"🎯 Final intent: {detected_intent} | State Managed: {updated_state.dict()}")
+        except Exception as e:
+            print(f"⚠️ Orchestrator Controller JSON Error: {e}")
             ctrl = {"needs_clarification": False, "detected_intent": detected_intent}
     
     # --- STEP 4: Clarification Loop (Follow-up) with CONVERSATION STATE CHECK ---
@@ -774,10 +1044,15 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
         
         # If router says ask AND controller agrees, then ask
         if should_ask and ctrl.get("needs_clarification") and detected_intent == "symptom_based":
+            qs = ctrl.get("questions") or []
+            if isinstance(qs, list) and len(qs) > 0:
+                qs = [qs[0]]
+            else:
+                qs = ["How long have you been experiencing this?"]
             return json.dumps({
                 "type": "clarification_questions",
-                "context": "To provide a more accurate assessment, I have a few follow-up questions:",
-                "questions": ctrl.get("questions", ["Have you experienced this before?"]),
+                "context": "To provide a more accurate assessment, I have a follow-up question:",
+                "questions": qs,
                 "requires_confirmation": True # Trigger Yes/No/Skip UI in frontend
             })
 
@@ -801,13 +1076,41 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
                 use_primary=False # Memory selection is simple, use smaller model
             )
 
-    # --- STEP 6: Evidence Retrieval (RAG Router) ---
     # Add current multimodal context to confirmed_context for specialist prompts
-    current_input_context = f"\n[CURRENT INPUTS]\n"
-    if user_text: current_input_context += f"- Text Query: {user_text}\n"
+    current_input_context = f"\n[CURRENT CLINICAL STATE]\n"
+    
+    # Safely extract state variables if they exist
+    _c_symptoms = []
+    _c_duration = None
+    _c_severity = None
+    try:
+        if 'updated_state' in locals() and updated_state:
+            _c_symptoms = updated_state.symptoms
+            _c_duration = updated_state.duration
+            _c_severity = updated_state.severity
+        elif 'prev_state' in locals() and prev_state:
+            _c_symptoms = prev_state.symptoms
+            _c_duration = prev_state.duration
+            _c_severity = prev_state.severity
+    except Exception:
+        pass
+        
+    if _c_symptoms:
+        current_input_context += f"- Active Symptoms: {', '.join(_c_symptoms)}\n"
+    if _c_duration:
+        current_input_context += f"- Duration: {_c_duration}\n"
+    if _c_severity:
+        current_input_context += f"- Severity: {_c_severity}\n"
+        
+    current_input_context += f"\n[CURRENT INPUTS]\n"
+    if user_text: current_input_context += f"- Raw Text Query: {user_text}\n"
     if voice_text: current_input_context += f"- Voice Query: {voice_text}\n"
     if image_desc: current_input_context += f"- Image Observations: {image_desc}\n"
     if report_text and not is_report_analysis: current_input_context += f"- Report Summary: {report_text[:200]}...\n"
+    
+    # If the user's combined_input is different from raw text (merged), explicitly state it
+    if combined_input != user_text and combined_input.strip():
+        current_input_context += f"- Merged Intent: {combined_input}\n"
     
     if confirmed_context == "None (user denied prior occurrence or no confirmation provided)":
         confirmed_context = current_input_context

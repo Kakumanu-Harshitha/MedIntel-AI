@@ -1,3 +1,6 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Core Web & Tools
 fastapi
 uvicorn
 sqlalchemy
@@ -10,18 +13,22 @@ pillow
 gTTS
 groq
 python-multipart
-torch
-transformers
-open-clip-torch
 fpdf
 passlib==1.7.4 
 bcrypt==3.2.2
 pinecone
-sentence-transformers
-numpy
 pypdf
-timm
 pyotp
 qrcode
 cryptography
 slowapi
+numpy
+
+# ML & AI (CPU-only Optimized)
+torch
+torchvision
+torchaudio
+timm
+transformers
+sentence-transformers
+open-clip-torch

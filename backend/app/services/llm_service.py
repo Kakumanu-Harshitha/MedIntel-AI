@@ -411,6 +411,8 @@ INPUT DATA:
 - USER CONTEXT: {user_context}
 - MEDICAL REFERENCE DATA (RAG): {rag_data}
 
+{fallback_instruction}
+
 OUTPUT FORMAT (JSON):
 {{
   "type": "medical_report_analysis",
@@ -1218,17 +1220,38 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     try:
         if is_report_analysis and is_image_analysis:
             print("🧬 Using MULTIMODAL Analysis Mode")
+            # Check for RAW_OCR_FALLBACK also in multimodal path
+            fallback_instruction = ""
+            if "[RAW_OCR_FALLBACK]" in report_text:
+                fallback_instruction = """
+🚨 SPECIAL INSTRUCTION: The 'EXTRACTED LAB DATA' contains RAW OCR TEXT. 
+Please extract medical findings intelligently from the noisy text and combine them with the image observations.
+"""
             prompt_content = PROMPT_REPORT_ANALYZER.format(
                 report_text=f"{report_text}\n\n[IMAGE OBSERVATIONS]\n{image_desc}\n\n[IMAGE TEXT (OCR)]\n{image_text}",
                 user_context=confirmed_context,
-                rag_data=rag_data
+                rag_data=rag_data,
+                fallback_instruction=fallback_instruction
             )
         elif is_report_analysis:
             print("📝 Using PROMPT_REPORT_ANALYZER")
+            
+            # Check for RAW_OCR_FALLBACK
+            fallback_instruction = ""
+            if "[RAW_OCR_FALLBACK]" in report_text:
+                print("🔄 Detected RAW OCR FALLBACK - providing specialized instruction to LLM")
+                fallback_instruction = """
+🚨 SPECIAL INSTRUCTION: The 'EXTRACTED LAB DATA' provided is RAW OCR TEXT from a medical report. 
+It might be noisy, contain typos, or have broken layouts. 
+Please use your internal medical knowledge to intelligently identify lab markers, values, units, and ranges from this text. 
+Focus on clinical accuracy and ignore metadata or noisy characters like 'RcgaNogxxX'.
+"""
+            
             prompt_content = PROMPT_REPORT_ANALYZER.format(
                 report_text=report_text,
                 user_context=confirmed_context,
-                rag_data=rag_data
+                rag_data=rag_data,
+                fallback_instruction=fallback_instruction
             )
         elif is_image_analysis:
             print(f"🖼️ Routing Image Analysis: {image_desc[:100]}...")

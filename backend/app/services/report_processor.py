@@ -129,11 +129,11 @@ class ReportProcessor:
         print(f"🔍 Parsing lab data from text ({len(text)} chars)...")
         parsed = lab_parser.parse(text)
         
-        # Requirement: If fewer than 1 valid tests are extracted, return error
-        # (Relaxed from 3 to 1 to support single-test reports, but with warning)
+        # Fallback Strategy: If structured parser finds 0 tests, 
+        # return the raw text for LLM extraction instead of an error.
         if len(parsed["tests"]) == 0:
-            print(f"⚠️ Parser found 0 tests. Sample text: {text[:200]}...")
-            return "ERROR: We couldn't find any recognizable lab results in this report. Please ensure it is a valid medical report and the text is legible."
+            print(f"⚠️ Parser found 0 tests. Using RAW FALLBACK. Sample text: {text[:100]}...")
+            return f"[RAW_OCR_FALLBACK]\nREPORT_TYPE: {parsed['report_type']}\nRAW_CONTENT:\n{text}"
             
         if len(parsed["tests"]) < 3:
             print(f"⚠️ Parser found only {len(parsed['tests'])} tests. This might be a partial or single-test report.")

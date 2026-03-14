@@ -1,8 +1,13 @@
 import os
+import sys
 import requests
 import uuid
 import time
 import xml.etree.ElementTree as ET
+
+# Add project root to sys.path for direct execution
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from app.rag.rag_service import rag_service
 from dotenv import load_dotenv
 
@@ -14,29 +19,53 @@ COMMON_TERMS = [
     "Wilson disease", "Hemochromatosis", "Huntington Disease", "Cystic Fibrosis",
     "Sickle Cell Anemia", "Thalassemia", "Gaucher Disease", "Fabry Disease",
     "Phenylketonuria", "Tay-Sachs Disease", "Alport Syndrome", "Marfan Syndrome",
+    "Fragile X Syndrome", "Duchenne Muscular Dystrophy", "Spinal Muscular Atrophy",
     
     # Neurological & Metabolic
     "Alzheimer", "Parkinson", "Multiple Sclerosis", "Epilepsy", "Migraine",
     "Diabetes Type 1", "Diabetes Type 2", "Metabolic Syndrome", "Hypothyroidism",
-    "Hyperthyroidism", "Cushing Syndrome", "Addison Disease",
+    "Hyperthyroidism", "Cushing Syndrome", "Addison Disease", "Graves Disease",
+    "Hashimoto", "Polycystic Ovary Syndrome", "Gestational Diabetes",
+    "Amyotrophic Lateral Sclerosis", "Bell's Palsy", "Trigeminal Neuralgia",
+    "Essential Tremor", "Myasthenia Gravis", "Narcolepsy", "Restless Legs Syndrome",
     
     # Infectious Diseases
     "Tuberculosis", "HIV/AIDS", "COVID-19", "Influenza", "Pneumonia", "Sepsis",
     "Malaria", "Dengue", "Zika", "Ebola", "Lyme Disease", "Hepatitis B", "Hepatitis C",
+    "Hepatitis A", "Cholera", "Typhoid", "Meningitis", "Encephalitis", "Shingles",
+    "Chickenpox", "Measles", "Mumps", "Rubella", "Pertussis", "Tetanus", "Diphtheria",
+    "Anthrax", "Plague", "Rabies", "Syphilis", "Gonorrhea", "Chlamydia", "Herpes",
+    "HPV", "Candidiasis", "Aspergillosis", "C. Difficile", "MRSA", "H. Pylori",
     
     # Psychiatric & Autoimmune
     "Schizophrenia", "Bipolar Disorder", "Depression", "Anxiety", "PTSD",
-    "Lupus", "Rheumatoid Arthritis", "Psoriasis", "Multiple Sclerosis",
-    "Celiac Disease", "Crohn's Disease", "Ulcerative Colitis", "Hashimoto Thyroiditis",
+    "Lupus", "Rheumatoid Arthritis", "Psoriasis", "Celiac Disease", 
+    "Crohn's Disease", "Ulcerative Colitis", "Hashimoto Thyroiditis",
+    "Anorexia Nervosa", "Bulimia", "OCD", "ADHD", "Autism", "Sjogren's Syndrome",
+    "Scleroderma", "Ankylosing Spondylitis", "Behcet's Disease",
     
     # Common Chronic Conditions
     "Hypertension", "Asthma", "Heart Disease", "Stroke", "Obesity", "Arthritis",
     "Chronic Kidney Disease", "Liver Cirrhosis", "Glaucoma", "Cataract",
-
+    "Osteoporosis", "Macular Degeneration", "COPD", "Sleep Apnea", "Gout",
+    "GERD", "IBS", "Endometriosis", "Fibromyalgia", "Atrial Fibrillation",
+    "Heart Failure", "Peripheral Artery Disease", "Deep Vein Thrombosis",
+    
+    # Cancers
+    "Breast Cancer", "Lung Cancer", "Prostate Cancer", "Colon Cancer",
+    "Skin Cancer", "Melanoma", "Leukemia", "Lymphoma", "Pancreatic Cancer",
+    "Ovarian Cancer", "Cervical Cancer", "Bladder Cancer", "Kidney Cancer",
+    "Liver Cancer", "Thyroid Cancer", "Brain Tumor", "Multiple Myeloma",
+    
     # Common Symptoms (MedlinePlus Primary Entries)
     "headache", "nausea", "bloating", "stomach pain", "dizziness", "fever",
     "fatigue", "cough", "shortness of breath", "chest pain", "joint pain",
-    "muscle ache", "diarrhea", "constipation", "insomnia", "rash"
+    "muscle ache", "diarrhea", "constipation", "insomnia", "rash", "weight loss",
+    "weight gain", "heart palpitations", "night sweats", "swollen lymph nodes",
+    "blurred vision", "ringing in ears", "difficulty swallowing", "back pain",
+    "neck pain", "hair loss", "dry mouth", "frequent urination", "blood in stool",
+    "blood in urine", "jaundice", "edema", "bruising", "tremor", "seizure",
+    "memory loss", "confusion", "mood swings", "itching", "numbness", "tingling"
 ]
 
 def safe_request(url, params=None, timeout=15):
@@ -78,14 +107,14 @@ def get_icd11_token():
         response.raise_for_status()
         return response.json().get('access_token')
     except Exception as e:
-        print(f"❌ Failed to get ICD-11 token: {e}")
+        print(f"FAILED to get ICD-11 token: {e}")
         return None
 
 def fetch_icd11_mms_taxonomy(token, depth=2, max_entities=100):
     """
     Recursively fetches ICD-11 MMS taxonomy and indexes descriptions.
     """
-    print(f"📋 Starting Automated ICD-11 Taxonomy Extraction (Depth: {depth}, Max: {max_entities})...")
+    print(f" Starting Automated ICD-11 Taxonomy Extraction (Depth: {depth}, Max: {max_entities})...")
     base_uri = 'https://id.who.int/icd/release/11/2024-01/mms'
     headers = {
         'Authorization': f'Bearer {token}',
@@ -117,6 +146,7 @@ def fetch_icd11_mms_taxonomy(token, depth=2, max_entities=100):
                     doc_id=doc_id,
                     text=text_content,
                     metadata={
+                        "dataset": "ICD11_MMS",
                         "source": "ICD-11 Official",
                         "code": code,
                         "title": title,
@@ -147,7 +177,7 @@ def fetch_ddi_automated():
     Fetches Drug-Drug Interactions using OpenFDA API for a wide range of common drugs.
     This replaces the discontinued RxNav interaction API.
     """
-    print("💊 Starting Automated Drug-Drug Interaction Ingestion (OpenFDA)...")
+    print(" Starting Automated Drug-Drug Interaction Ingestion (OpenFDA)...")
     
     # Expanded list of common generic drugs to fetch interactions for
     COMMON_DRUGS = [
@@ -196,6 +226,7 @@ def fetch_ddi_automated():
                     doc_id=doc_id,
                     text=text,
                     metadata={
+                        "dataset": "OpenFDA_DDI",
                         "source": "OpenFDA Official Label",
                         "title": f"Interactions: {generic_name}",
                         "drug": generic_name,
@@ -223,8 +254,8 @@ def seed_icd11_data():
     """
     token = get_icd11_token()
     if token:
-        # Depth 3 with 200 entities provides good coverage without overloading
-        return fetch_icd11_mms_taxonomy(token, depth=3, max_entities=200)
+        # Depth 4 with 1000 entities provides extensive coverage
+        return fetch_icd11_mms_taxonomy(token, depth=4, max_entities=1000)
     return 0
 
 def seed_ddi_data():
@@ -237,11 +268,17 @@ def fetch_medlineplus_data():
     """
     Fetches health topic summaries from MedlinePlus Web Service.
     """
-    print("🏥 Fetching data from MedlinePlus...")
+    print(" Fetching data from MedlinePlus...")
     count = 0
     SYMPTOM_TERMS = ["headache", "nausea", "bloating", "stomach pain", "dizziness", "fever", 
                      "fatigue", "cough", "shortness of breath", "chest pain", "joint pain", 
-                     "muscle ache", "diarrhea", "constipation", "insomnia", "rash"]
+                     "muscle ache", "diarrhea", "constipation", "insomnia", "rash",
+                     "weight loss", "weight gain", "heart palpitations", "night sweats", 
+                     "swollen lymph nodes", "blurred vision", "ringing in ears", 
+                     "difficulty swallowing", "back pain", "neck pain", "hair loss", 
+                     "dry mouth", "frequent urination", "blood in stool", "blood in urine", 
+                     "jaundice", "edema", "bruising", "tremor", "seizure", "memory loss", 
+                     "confusion", "mood swings", "itching", "numbness", "tingling"]
     
     for term in COMMON_TERMS:
         is_symptom = term in SYMPTOM_TERMS
@@ -274,6 +311,7 @@ def fetch_medlineplus_data():
                             doc_id=doc_id,
                             text=clean_text,
                             metadata={
+                                "dataset": "MedlinePlus", # ADDED FOR DELETION
                                 "source": "MedlinePlus (NIH/NLM)",
                                 "title": title,
                                 "category": category,
@@ -294,7 +332,7 @@ def fetch_pubmed_data():
     """
     Fetches recent abstracts from PubMed using E-utils.
     """
-    print("🔬 Fetching data from PubMed...")
+    print(" Fetching data from PubMed...")
     count = 0
     base_search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     base_fetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
@@ -305,7 +343,7 @@ def fetch_pubmed_data():
             "db": "pubmed",
             "term": term,
             "retmode": "json",
-            "retmax": 5
+            "retmax": 20
         }
         search_resp = safe_request(base_search_url, params=search_params)
         if search_resp:
@@ -338,6 +376,7 @@ def fetch_pubmed_data():
                                 doc_id=doc_id,
                                 text=abstract_text,
                                 metadata={
+                                    "dataset": "PubMed", # ADDED FOR DELETION
                                     "source": f"PubMed (PMID: {pmid})",
                                     "title": title,
                                     "category": "Clinical Research",
@@ -345,7 +384,7 @@ def fetch_pubmed_data():
                                 }
                             )
                             count += 1
-                            if count % 10 == 0:
+                            if count % 20 == 0:
                                 print(f"   - Progress: {count} PubMed records verified/updated...")
             except Exception as e:
                 print(f"   ⚠️ Parsing Error for PubMed {term}: {e}")
@@ -359,10 +398,10 @@ def fetch_who_nhs_factsheets():
     
     CRITICAL: All records MUST include dataset="WHO_NHS" metadata.
     """
-    print("🏥 Fetching WHO/NHS Disease Fact Sheets...")
+    print(" Fetching WHO/NHS Disease Fact Sheets...")
     count = 0
     
-    # Common diseases to fetch fact sheets for
+    # Expanded list of diseases to fetch fact sheets for
     DISEASE_TOPICS = [
         "Diabetes", "Hypertension", "Asthma", "Heart Disease", "Stroke",
         "Cancer", "Tuberculosis", "HIV/AIDS", "COVID-19", "Influenza",
@@ -371,11 +410,13 @@ def fetch_who_nhs_factsheets():
         "Chronic Kidney Disease", "COPD", "Epilepsy", "Multiple Sclerosis",
         "Lupus", "Rheumatoid Arthritis", "Psoriasis", "Celiac Disease",
         "Crohn's Disease", "Ulcerative Colitis", "Migraine", "Osteoporosis",
-        "Anemia", "Thyroid Disease", "Schizophrenia", "Bipolar Disorder"
+        "Anemia", "Thyroid Disease", "Schizophrenia", "Bipolar Disorder",
+        "Glaucoma", "Cataract", "Sleep Apnea", "Gout", "GERD", "IBS", 
+        "Endometriosis", "Fibromyalgia", "Atrial Fibrillation", "Sepsis"
     ]
     
     # WHO Health Topics (using their public API/web service)
-    print("   📋 Fetching WHO fact sheets...")
+    print("    Fetching WHO fact sheets...")
     for topic in DISEASE_TOPICS:
         try:
             # WHO provides structured health topic data
@@ -446,7 +487,7 @@ Some cases may be preventable through healthy lifestyle choices and regular heal
             print(f"   ⚠️ Error fetching WHO fact sheet for {topic}: {e}")
     
     # NHS Health A-Z (using their public content)
-    print("   📋 Fetching NHS Health A-Z content...")
+    print("    Fetching NHS Health A-Z content...")
     for topic in DISEASE_TOPICS:
         try:
             # NHS provides patient-friendly health information
@@ -525,7 +566,7 @@ tailored to your individual needs.
 
 
 def run_bulk_ingestion():
-    print("🚀 Starting Bulk Medical Data Ingestion...")
+    print(" Starting Bulk Medical Data Ingestion...")
     
     if not rag_service.enabled:
         print("❌ RAG Service is not enabled. Check your PINECONE_API_KEY.")

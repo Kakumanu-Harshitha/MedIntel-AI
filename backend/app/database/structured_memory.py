@@ -15,11 +15,11 @@ if MONGO_URI:
         client = MongoClient(MONGO_URI)
         db = client["Health_Assistant"]
         memory_collection = db["Structured_Health_Memory"]
-        print("✅ Structured Memory MongoDB client initialized.")
+        print("[OK] Structured Memory MongoDB client initialized.")
     except Exception as e:
-        print(f"⚠️ WARNING: Could not connect to MongoDB for structured memory. Error: {e}")
+        print(f"[WARNING] Could not connect to MongoDB for structured memory. Error: {e}")
 else:
-    print("⚠️ WARNING: MONGO_URI not found for structured memory.")
+    print("[WARNING] MONGO_URI not found for structured memory.")
 
 class StructuredMemory:
     def store_chunk(self, user_id: str, chunk_type: str, content: str, confidence: str = "user_reported"):
@@ -33,7 +33,7 @@ class StructuredMemory:
                 # Basic check to see if this medication is already listed
                 existing = memory_collection.find_one({"user_id": user_id, "type": "medication", "content": content})
                 if existing:
-                    print(f"ℹ️ Medication '{content}' already in memory for user {user_id}")
+                    print(f"[INFO] Medication '{content}' already in memory for user {user_id}")
                     return
 
             memory_collection.insert_one({
@@ -43,9 +43,9 @@ class StructuredMemory:
                 "confidence": confidence,
                 "timestamp": datetime.utcnow()
             })
-            print(f"✅ Stored {chunk_type} for user {user_id}")
+            print(f"[OK] Stored {chunk_type} for user {user_id}")
         except Exception as e:
-            print(f"❌ ERROR: Failed to store structured memory chunk. Error: {e}")
+            print(f"[ERROR] Failed to store structured memory chunk. Error: {e}")
 
     def get_relevant_history(self, user_id: str, query: str = "", limit: int = 5) -> List[Dict[str, Any]]:
         """
@@ -61,7 +61,7 @@ class StructuredMemory:
             ).sort("timestamp", -1).limit(limit)
             return list(chunks)
         except Exception as e:
-            print(f"❌ ERROR: Failed to retrieve structured memory. Error: {e}")
+            print(f"[ERROR] Failed to retrieve structured memory. Error: {e}")
             return []
 
     def summarize_memory(self, chunks: List[Dict[str, Any]]) -> str:

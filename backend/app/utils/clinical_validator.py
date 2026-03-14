@@ -44,8 +44,11 @@ class ClinicalValidator:
         """
         STRICT READINESS CHECK:
         Returns True only if there are at least 2 symptoms AND duration is known.
+        This prevents providing a diagnosis with vague or insufficient information.
         """
-        return len(state.symptoms) >= 2 and state.duration is not None
+        has_min_symptoms = len(state.symptoms) >= 2
+        has_duration = state.duration is not None
+        return has_min_symptoms and has_duration
 
     def match_conditions(self, symptoms: List[str]) -> list:
         """

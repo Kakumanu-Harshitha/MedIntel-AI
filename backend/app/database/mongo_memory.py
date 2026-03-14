@@ -24,11 +24,11 @@ if MONGO_URI:
         memory_collection = db["Health_Memory"]
         feedback_collection = db["Health_Feedback"]
         analytics_collection = db["Health_Analytics"]
-        print("✅ MongoDB client initialized.")
+        print("[OK] MongoDB client initialized.")
     except Exception as e:
-        print(f"⚠️ WARNING: Could not connect to MongoDB. Memory service disabled. Error: {e}")
+        print(f"[WARNING] Could not connect to MongoDB. Memory service disabled. Error: {e}")
 else:
-    print("⚠️ WARNING: MONGO_URI not found! Memory service disabled.")
+    print("[WARNING] MONGO_URI not found! Memory service disabled.")
 
 
 def _clean_content(content: str) -> str:
@@ -126,7 +126,7 @@ def store_message(user_id: str, role: str, content: str, report_type: str = None
         memory_collection.insert_one(doc)
         return report_id
     except Exception as e:
-        print(f"❌ ERROR: Failed to store message in MongoDB. Error: {e}")
+        print(f"[ERROR] Failed to store message in MongoDB. Error: {e}")
         return None
 
 def get_report_by_id(user_id: str, report_id: str) -> dict:
@@ -144,7 +144,7 @@ def get_report_by_id(user_id: str, report_id: str) -> dict:
                 return None
         return None
     except Exception as e:
-        print(f"❌ ERROR: Failed to retrieve report by ID. Error: {e}")
+        print(f"[ERROR] Failed to retrieve report by ID. Error: {e}")
         return None
 
 def log_feedback(user_id: str, rating: str, comment: str = None, context: str = None, report_id: str = None):
@@ -160,7 +160,7 @@ def log_feedback(user_id: str, rating: str, comment: str = None, context: str = 
             "timestamp": datetime.utcnow()
         })
     except Exception as e:
-        print(f"❌ ERROR: Failed to log feedback. Error: {e}")
+        print(f"[ERROR] Failed to log feedback. Error: {e}")
 
 def log_analytics(event_type: str, details: dict):
     """Logs system events for analysis (e.g., Escalation triggered)."""
@@ -172,7 +172,7 @@ def log_analytics(event_type: str, details: dict):
             "timestamp": datetime.utcnow()
         })
     except Exception as e:
-        print(f"❌ ERROR: Failed to log analytics. Error: {e}")
+        print(f"[ERROR] Failed to log analytics. Error: {e}")
 
 def get_user_memory(user_id: str, limit: int = 10) -> list:
     """Retrieves the last 'limit' messages for the LLM, in chronological order (Oldest -> Newest)."""
@@ -192,7 +192,7 @@ def get_user_memory(user_id: str, limit: int = 10) -> list:
         # Reverse the results so they are in chronological order (Oldest -> Newest)
         return list(reversed(messages))
     except Exception as e:
-        print(f"❌ ERROR: Failed to retrieve user memory from MongoDB. Error: {e}")
+        print(f"[ERROR] Failed to retrieve user memory from MongoDB. Error: {e}")
         return []
 
 def get_full_history_for_dashboard(user_id: str, limit: int = 100) -> list:
@@ -217,7 +217,7 @@ def get_full_history_for_dashboard(user_id: str, limit: int = 100) -> list:
         # This ensures the oldest message is at the top [0] and newest at the bottom [last]
         return list(reversed(messages))
     except Exception as e:
-        print(f"❌ ERROR: Failed to retrieve dashboard history from MongoDB. Error: {e}")
+        print(f"[ERROR] Failed to retrieve dashboard history from MongoDB. Error: {e}")
         return []
 
 def get_reports_history(user_id: str, limit: int = 50) -> list:
@@ -243,7 +243,7 @@ def get_reports_history(user_id: str, limit: int = 50) -> list:
         
         return list(reversed(messages))
     except Exception as e:
-        print(f"❌ ERROR: Failed to retrieve reports history. Error: {e}")
+        print(f"[ERROR] Failed to retrieve reports history. Error: {e}")
         return []
 
 def clear_user_memory(user_id: str):
@@ -251,9 +251,9 @@ def clear_user_memory(user_id: str):
     if memory_collection is None: return
     try:
         memory_collection.delete_many({"user_id": user_id})
-        print(f"✅ Memory cleared for user: {user_id}")
+        print(f"[OK] Memory cleared for user: {user_id}")
     except Exception as e:
-        print(f"❌ ERROR: Failed to clear user memory. Error: {e}")
+        print(f"[ERROR] Failed to clear user memory. Error: {e}")
 
 def get_feedback_metrics():
     """Retrieves satisfaction metrics for the owner dashboard."""
@@ -294,7 +294,7 @@ def get_feedback_metrics():
             "recent_feedback": recent_feedback
         }
     except Exception as e:
-        print(f"❌ ERROR: Failed to get feedback metrics. Error: {e}")
+        print(f"[ERROR] Failed to get feedback metrics. Error: {e}")
         return {
             "helpfulness_rate": 0,
             "total_feedback": 0,

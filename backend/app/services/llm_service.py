@@ -23,9 +23,9 @@ LLM_MODEL = PRIMARY_MODEL
 client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY")) if os.getenv("GROQ_API_KEY") else None
 
 if client:
-    print(f"✅ Async Groq client for LLM initialized. Primary: {PRIMARY_MODEL}, Fallback: {FALLBACK_MODEL}")
+    print(f"[OK] Async Groq client for LLM initialized. Primary: {PRIMARY_MODEL}, Fallback: {FALLBACK_MODEL}")
 else:
-    print("⚠️ WARNING: GROQ_API_KEY not found! LLM service disabled.")
+    print("[WARNING] GROQ_API_KEY not found! LLM service disabled.")
 
 async def call_llm_with_fallback(messages: list[dict], response_format: dict | None = None, use_primary: bool = True) -> str:
     """
@@ -39,7 +39,7 @@ async def call_llm_with_fallback(messages: list[dict], response_format: dict | N
     
     try:
         # Attempt 1
-        print(f"🤖 Calling LLM ({current_model})...")
+        print(f"[LLM] Calling LLM ({current_model})...")
         response = await client.chat.completions.create(
             messages=messages,
             model=current_model,
@@ -49,7 +49,7 @@ async def call_llm_with_fallback(messages: list[dict], response_format: dict | N
     except groq.RateLimitError as e:
         # If we already tried the fallback or if we were using the primary and it failed
         if current_model == PRIMARY_MODEL:
-            print(f"⚠️ Rate limit reached for {PRIMARY_MODEL}. Falling back to {FALLBACK_MODEL}...")
+            print(f"[WARNING] Rate limit reached for {PRIMARY_MODEL}. Falling back to {FALLBACK_MODEL}...")
             try:
                 # Attempt 2 with fallback model
                 response = await client.chat.completions.create(
@@ -59,13 +59,13 @@ async def call_llm_with_fallback(messages: list[dict], response_format: dict | N
                 )
                 return response.choices[0].message.content
             except Exception as fallback_error:
-                print(f"❌ Fallback model also failed: {fallback_error}")
+                print(f"[ERROR] Fallback model also failed: {fallback_error}")
                 raise fallback_error
         else:
-            print(f"❌ Rate limit reached for {current_model}. No further fallback available.")
+            print(f"[ERROR] Rate limit reached for {current_model}. No further fallback available.")
             raise e
     except Exception as e:
-        print(f"❌ LLM Error ({current_model}): {e}")
+        print(f"[ERROR] LLM Error ({current_model}): {e}")
         raise e
 
 async def get_streaming_llm_response(system_prompt: str):
@@ -88,7 +88,7 @@ async def get_streaming_llm_response(system_prompt: str):
             if content:
                 yield content
     except Exception as e:
-        print(f"❌ Streaming LLM Error: {e}")
+        print(f"[ERROR] Streaming LLM Error: {e}")
         yield "An error occurred while generating the response."
 
 
@@ -212,7 +212,7 @@ class Guardrails:
                 return {
                     "is_safe": False,
                     "response": {
-                        "summary": "🚨 CRITICAL SAFETY ALERT",
+                        "summary": "[ALERT] CRITICAL SAFETY ALERT",
                         "possible_causes": ["Potential Medical Emergency"],
                         "risk_assessment": {
                             "severity": "EMERGENCY",
@@ -260,7 +260,7 @@ def analyze_history_trends(history: list[dict], current_symptoms: str) -> str:
             repeated_count += 1
             
     if repeated_count > 0:
-        return f"⚠️ RECURRING ISSUE: User has reported similar symptoms in {repeated_count} of the last 3 interactions. Evaluate for worsening condition."
+        return f"[WARNING] RECURRING ISSUE: User has reported similar symptoms in {repeated_count} of the last 3 interactions. Evaluate for worsening condition."
     
     return "New symptom presentation."
 
@@ -297,7 +297,7 @@ Your task is to:
 1. Determine whether the user query is informational (e.g., "What is Wilson disease?") or symptom-based (e.g., "I have a headache").
 2. Decide whether clarification is HELPFUL to provide a more accurate and safe assessment.
 
-🚨 CLINICAL INTERVIEW RULES:
+[CLINICAL INTERVIEW RULES]
 
 1. You SHOULD ask follow-up questions if:
    - The user provides a symptom without duration (e.g., "I have a cough" vs "I've had a cough for 3 days").
@@ -402,7 +402,7 @@ TASK:
 4. If the report indicates a specific condition, provide a detailed explanation of that condition (definition, symptoms, causes, management).
 5. DO NOT provide a medical diagnosis.
 
-🚨 CRITICAL: You MUST include BOTH the "summary" field AND the "health_information" field in your JSON output. 
+[IMPORTANT] You MUST include BOTH the "summary" field AND the "health_information" field in your JSON output. 
 - The "summary" field should contain a concise but thorough overview of the entire report findings.
 - The "health_information" field MUST contain the detailed explanation of any conditions, symptoms, and general medical knowledge relevant to the report.
 
@@ -445,7 +445,7 @@ You are a Medical Image Modality Detector. Your task is to classify an image ana
 
 INPUT CAPTION: {image_caption}
 
-🚨 CLASSIFICATION RULES:
+[CLASSIFICATION RULES]
 1. If the caption mentions "Eye", "Retina", "Ocular", or "Red Eye", classify as 'ophthalmology'.
 2. If the caption mentions "Skin", "Rash", "Dermatology", or "Lesion", classify as 'dermatology'.
 3. If the caption mentions "X-ray", "Radiograph", "MRI", "CT", or "Ultrasound", classify as 'radiology'.
@@ -567,7 +567,7 @@ OUTPUT FORMAT (JSON):
 {{
   "input_type": "medical_image",
   "status": "HITL_ESCALATED",
-  "message": "⚠️ This image cannot be safely analyzed by the system. Please consult a qualified healthcare professional for proper evaluation.",
+  "message": "[WARNING] This image cannot be safely analyzed by the system. Please consult a qualified healthcare professional for proper evaluation.",
   "reason": "{escalation_reason}",
   "disclaimer": "Human-in-the-loop escalation triggered for safety."
 }}
@@ -609,7 +609,7 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
     # and combined_input was built from it above. Just read the flag.
     _bridge_merged = bool(inputs.get("bridge_active", False))
     if _bridge_merged:
-        print(f"⚡ Bridge active (from query_service) → combined_input: {combined_input!r}")
+        print(f"[BRIDGE] Bridge active (from query_service) -> combined_input: {combined_input!r}")
     if not combined_input and report_text:
         combined_input = "[Medical Report Analysis Requested]"
         
@@ -627,13 +627,13 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
         if "[PDF Report Uploaded" in report_text or "[Image Report Uploaded" in report_text:
             print("⚠️ Report Analysis Mode (Placeholder detected)")
         else:
-            print("📋 Entering Medical Report Analysis Mode")
+            print("[REPORT] Entering Medical Report Analysis Mode")
     
     if is_image_analysis:
-        print("📷 Entering Medical Image Analysis Mode")
+        print("[IMAGE] Entering Medical Image Analysis Mode")
 
     if is_report_analysis and is_image_analysis:
-        print("🧬 Entering Combined Multimodal Analysis Mode")
+        print("[MULTIMODAL] Entering Combined Multimodal Analysis Mode")
 
     modality = None
     escalation_reason = None
@@ -676,7 +676,7 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
                 session.state = ClinicalState()
                 prev_state = session.state
                 session_repo.save_session(session)
-                print(f"🔄 SESSION RESET: Cleared previous session state. (was_report={_prev_was_report})")
+                print(f"[SESSION] SESSION RESET: Cleared previous session state. (was_report={_prev_was_report})")
             # --------------------------------------------------------------------------------------
             
             import re
@@ -685,7 +685,7 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
             _is_short_input = len(user_text.strip().split()) <= 4
             
             if session.state.pending_field and _is_short_input:
-                print(f"🔄 Follow-Up Resolver: processing pending_field '{session.state.pending_field}'")
+                print(f"[FOLLOW-UP] Follow-Up Resolver: processing pending_field '{session.state.pending_field}'")
                 field = session.state.pending_field
                 
                 if field == "duration":
@@ -704,9 +704,9 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
                 session_repo.save_session(session)
                 skip_intent_detection = True
                 _bridge_merged = True
-                print(f"✅ State updated directly. Bypassing intent detection. Merged: {combined_input}")
+                print(f"[OK] State updated directly. Bypassing intent detection. Merged: {combined_input}")
             elif _short_ans_match and session.state.symptoms and _is_short_input:
-                print("🛡 Hardening: Duration regex matched. Updating directly.")
+                print("[GUARD] Hardening: Duration regex matched. Updating directly.")
                 session.state.duration = user_text.strip()
                 session.state.pending_field = None
                 
@@ -717,9 +717,9 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
                 session_repo.save_session(session)
                 skip_intent_detection = True
                 _bridge_merged = True
-                print(f"✅ Quick duration detected. Bypassing intent detection. Merged: {combined_input}")
+                print(f"[OK] Quick duration detected. Bypassing intent detection. Merged: {combined_input}")
         except Exception as _ime:
-            print(f"⚠️ Follow-Up Resolver failed/skipped ({_ime})")
+            print(f"[WARNING] Follow-Up Resolver failed/skipped ({_ime})")
 
     # --- STEP 2.2: MEDICAL / GENERAL INTENT GATE ---
     # Skip for multimodal inputs — images/reports/voice are always health-related
@@ -731,14 +731,14 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
                 use_primary=False  # cheap single-word call
             )
             _intent = _intent_raw.strip().upper().split()[0] if _intent_raw.strip() else "MEDICAL"
-            print(f"🧠 Intent Gate: {combined_input[:50]!r} → {_intent}")
+            print(f"[INTENT] Intent Gate: {combined_input[:50]!r} -> {_intent}")
         except Exception as _ie:
-            print(f"⚠️ Intent gate failed ({_ie}), defaulting to MEDICAL")
+            print(f"[WARNING] Intent gate failed ({_ie}), defaulting to MEDICAL")
             _intent = "MEDICAL"
 
         if _intent == "GENERAL":
             # Strict medical-only mode: always return the same redirect — never engage casually
-            print(f"🚫 Non-medical input blocked: {combined_input[:60]!r}")
+            print(f"[BLOCK] Non-medical input blocked: {combined_input[:60]!r}")
             return json.dumps({"type": "chat_message", "message": HEALTH_ONLY_REDIRECT})
 
 
@@ -797,7 +797,7 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
             for symptom_name in SYMPTOM_FALLBACKS.keys():
                 if symptom_name in query_lower and symptom_name in past_query:
                     already_discussed = True
-                    print(f"💬 CONVERSATION MEMORY: Already discussed '{symptom_name}' recently")
+                    print(f"[MEMORY] Already discussed '{symptom_name}' recently")
                     print(f"   Previous query: {past_query[:50]}...")
                     break
             if already_discussed:
@@ -816,7 +816,7 @@ async def run_clinical_analysis(profile: dict, history: list[dict], inputs: dict
             follow_up_q = None
         else:
             try:
-                from clinical_memory import state_manager, session_repo, ClinicalState
+                from app.ai_pipeline.clinical_memory import state_manager, session_repo, ClinicalState
                 # Build conversation history strings for the controller
                 recent_history_strs = [m.get("content", "") for m in history[-4:]] if history else []
                 last_question_str = None

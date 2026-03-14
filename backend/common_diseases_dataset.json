@@ -1,0 +1,757 @@
+[
+    {
+        "id": "common_cold",
+        "text": "Common cold is a very common viral infection that affects the nose and throat. It is usually caused by viruses such as rhinoviruses and spreads easily through air droplets or contact with infected people. Symptoms often include a runny or blocked nose, sneezing, sore throat, mild cough, fatigue, and sometimes a low-grade fever.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Infectious Disease",
+            "title": "Common Cold",
+            "source": "User Provided",
+            "symptom_keywords": [
+                "runny nose",
+                "sneezing",
+                "sore throat",
+                "mild cough",
+                "fatigue",
+                "fever"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "dry_cough",
+        "text": "Dry cough is a type of cough that does not produce mucus. It usually causes irritation or a tickling sensation in the throat. Often associated with viral infections, allergies, or irritants like smoke and dust. Management involves warm fluids, hydration, and avoiding irritants.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Respiratory",
+            "title": "Dry Cough",
+            "source": "User Provided",
+            "symptom_keywords": [
+                "frequent coughing",
+                "throat dryness",
+                "throat irritation",
+                "chest discomfort"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "wet_cough",
+        "text": "Wet cough, or productive cough, occurs when mucus is produced in the respiratory tract. It helps the body remove mucus from the lungs. Common in respiratory infections. Management involves warm fluids and steam inhalation to loosen mucus.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Respiratory",
+            "title": "Wet Cough",
+            "source": "User Provided",
+            "symptom_keywords": [
+                "coughing with mucus",
+                "chest congestion",
+                "throat discomfort",
+                "shortness of breath"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "fever",
+        "text": "Fever is a temporary increase in body temperature, usually a defense mechanism against infection. Symptoms include chills, sweating, and weakness. Management focuses on rest and hydration. High or persistent fever requires medical attention.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "General Health",
+            "title": "Fever",
+            "source": "User Provided",
+            "symptom_keywords": [
+                "elevated temperature",
+                "sweating",
+                "chills",
+                "weakness",
+                "headache",
+                "body pain"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "acidity",
+        "text": "Acidity, or acid reflux, happens when stomach acid flows back into the esophagus. It causes a burning sensation (heartburn). Management involves smaller meals and avoiding trigger foods like spicy or oily items.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Gastrointestinal",
+            "title": "Acidity",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "heartburn",
+                "sour taste",
+                "bloating",
+                "chest discomfort"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "gastritis",
+        "text": "Gastritis is inflammation of the stomach lining. Symptoms include upper abdominal pain and nausea. It can be caused by infections or irritants like alcohol. Management involves a bland diet and medical consultation.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Gastrointestinal",
+            "title": "Gastritis",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "stomach pain",
+                "nausea",
+                "burning sensation",
+                "fullness"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "constipation",
+        "text": "Constipation involves infrequent or difficult bowel movements. Often caused by low fiber or dehydration. Increasing fiber, water intake, and exercise are effective management strategies.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Gastrointestinal",
+            "title": "Constipation",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "infrequent stools",
+                "hard stools",
+                "straining",
+                "bloating"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "diarrhea",
+        "text": "Diarrhea is loose, watery stools occurring more frequently than usual. It can lead to dehydration. Management involves oral rehydration and light foods. Persistent diarrhea needs medical evaluation.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Gastrointestinal",
+            "title": "Diarrhea",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "watery stools",
+                "frequent movements",
+                "stomach cramps",
+                "dehydration"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "food_poisoning",
+        "text": "Food poisoning is caused by eating contaminated food. Symptoms include nausea, vomiting, and diarrhea. Most cases resolve with rest and hydration. Contaminated meat or dairy are common culprits.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Gastrointestinal",
+            "title": "Food Poisoning",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "vomiting",
+                "nausea",
+                "stomach pain",
+                "diarrhea"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "bloating_gas",
+        "text": "Bloating and gas cause the abdomen to feel full and tight. Often due to trapped air or certain foods. Management involves slow eating and identifying dietary triggers.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Gastrointestinal",
+            "title": "Bloating / Gas",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "stomach fullness",
+                "burping",
+                "flatulence",
+                "gas"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "ibs",
+        "text": "IBS is a chronic disorder of the large intestine. Symptoms include cramping, bloating, and irregular bowel habits. Management involves dietary changes (low FODMAP) and stress control.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Gastrointestinal",
+            "title": "Irritable Bowel Syndrome (IBS)",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "abdominal pain",
+                "bloating",
+                "irregular bowel habits",
+                "gas"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "menstrual_cramps",
+        "text": "Menstrual cramps are lower abdominal pains during menstruation. They can range from mild to severe discomfort. Management includes heat application, light exercise, and rest.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Women's Health",
+            "title": "Menstrual Cramps",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "lower abdominal pain",
+                "back pain",
+                "fatigue",
+                "nausea"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "pcos",
+        "text": "PCOS is a hormonal disorder causing irregular periods, weight gain, and acne. It involves excess androgen levels and can affect fertility. Management includes lifestyle changes and sometimes medication.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Women's Health",
+            "title": "PCOS",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "irregular periods",
+                "acne",
+                "hair thinning",
+                "weight gain"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "pms",
+        "text": "PMS includes physical and emotional symptoms occurring before a period. Mood swings, breast tenderness, and fatigue are common. Lifestyle adjustments can help manage these monthly symptoms.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Women's Health",
+            "title": "PMS",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "mood swings",
+                "fatigue",
+                "irritability",
+                "breast tenderness"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "irregular_periods",
+        "text": "Irregular periods mean cycles that are unpredictable in length or timing. Can be caused by stress, weight changes, or underlying conditions like PCOS. Tracking and medical consultation are advised.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Women's Health",
+            "title": "Irregular Periods",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "unpredictable cycle",
+                "missed periods",
+                "hormonal changes"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "anxiety",
+        "text": "Anxiety involves persistent worry or fear that interferes with daily life. Symptoms include restlessness and rapid heartbeat. Management involves stress reduction, exercise, and professional support.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Mental Health",
+            "title": "Anxiety",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "worry",
+                "restlessness",
+                "sleep problems",
+                "difficulty concentrating"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "depression",
+        "text": "Depression is a mood disorder causing persistent sadness and loss of interest. It affects energy, sleep, and appetite. It is treatable with therapy and medication. Professional help is essential.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Mental Health",
+            "title": "Depression",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "sadness",
+                "low energy",
+                "loss of interest",
+                "hopelessness"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "insomnia",
+        "text": "Insomnia is the inability to fall or stay asleep. Often caused by stress or poor sleep hygiene. Management involves regular sleep schedules, dark environment, and stress management.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Mental Health",
+            "title": "Insomnia",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "sleeplessness",
+                "fatigue",
+                "irritability",
+                "concentration issues"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "panic_attacks",
+        "text": "Panic attacks are sudden episodes of intense fear with physical reactions like rapid heart rate and trembling. Management involves breathing exercises and seeking mental health support.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Mental Health",
+            "title": "Panic Attacks",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "intense fear",
+                "rapid heart rate",
+                "trembling",
+                "breathlessness"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "eye_strain",
+        "text": "Eye strain happens from intense eye use, common with long screen sessions. Symptoms include tired, burning eyes and headache. Following the 20-20-20 rule helps prevent strain.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Eye/Digital Health",
+            "title": "Eye Strain",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "tired eyes",
+                "burning eyes",
+                "blurred vision",
+                "headache"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "dry_eyes",
+        "text": "Dry eyes occur when tears don't provide enough lubrication. Symptoms include stinging and redness. Using artificial tears and avoiding direct wind or air can alleviate discomfort.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Eye/Digital Health",
+            "title": "Dry Eyes",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "stinging eyes",
+                "redness",
+                "light sensitivity"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "red_eyes",
+        "text": "Red eyes occur when small blood vessels on the eye surface expand. Can be caused by irritation, allergies, or infections like conjunctivitis. Persistent redness needs medical evaluation.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Eye/Digital Health",
+            "title": "Red Eyes",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "bloodshot eyes",
+                "irritation",
+                "itching",
+                "discharge"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "diabetes",
+        "text": "Diabetes is a chronic condition causing high blood sugar. Symptoms include extreme thirst and frequent urination. Requires careful management of diet, activity, and medical monitoring.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Lifestyle",
+            "title": "Diabetes",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "excessive thirst",
+                "frequent urination",
+                "weight loss",
+                "fatigue"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "high_blood_pressure",
+        "text": "Hypertension often has no symptoms but increases heart disease risk. Management involves reducing salt, regular exercise, and weight control. Regular BP checks are essential.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Lifestyle",
+            "title": "High Blood Pressure",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "asymptomatic",
+                "headache",
+                "shortness of breath",
+                "nosebleeds"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "obesity",
+        "text": "Obesity is having an excessive amount of body fat that increases health risks like diabetes and heart disease. Management involves calorie control, physical activity, and medical support.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Lifestyle",
+            "title": "Obesity",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "weight gain",
+                "shortness of breath",
+                "joint pain",
+                "fatigue"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "vitamin_deficiency",
+        "text": "Vitamin deficiency occurs when the body lacks essential nutrients like Vitamin D or B12. Symptoms include fatigue and weakness. Balanced diet and supplementation can address these gaps.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Lifestyle",
+            "title": "Vitamin Deficiency",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "fatigue",
+                "weakness",
+                "mood changes",
+                "brittle nails"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "eczema",
+        "text": "Eczema causes red, itchy skin. Common in children and often chronic. Management involves moisturizing, avoiding harsh soaps, and identifying environmental triggers.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Skin Conditions",
+            "title": "Eczema",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "red skin",
+                "itchy skin",
+                "inflammation",
+                "dry skin"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "dandruff",
+        "text": "Dandruff causes scalp flaking and itching. Often due to dry skin or yeast-like fungus. Using anti-dandruff shampoo and maintaining scalp health can control the condition.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Skin Conditions",
+            "title": "Dandruff",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "scalp flaking",
+                "itching",
+                "white scales"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "skin_allergy",
+        "text": "Skin allergies occur when the skin reacts to an external substance (allergen). Symptoms include redness, itching, and rashes (hives). Identifying the trigger and avoiding contact is key.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Skin Conditions",
+            "title": "Skin Allergy",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "red rash",
+                "itching",
+                "hives",
+                "swelling"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "sunburn",
+        "text": "Sunburn is skin damage from UV rays. Causes red, painful skin that may later peel. Management involves cool compresses, hydration, and aloe vera. Sunscreen prevents future damage.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Skin Conditions",
+            "title": "Sunburn",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "red skin",
+                "painful skin",
+                "peeling skin",
+                "burning"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "asthma",
+        "text": "Asthma causes narrow, swollen airways and extra mucus. Leads to breathing difficulties and wheezing. Management involves inhalers and avoiding triggers like dust or pollen.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Respiratory",
+            "title": "Asthma",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "shortness of breath",
+                "wheezing",
+                "chest tightness",
+                "coughing"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "bronchitis",
+        "text": "Bronchitis is inflammation of the bronchial tubes, often following a cold or flu. Causes a persistent cough with mucus. Most acute cases resolve with rest and fluids.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Respiratory",
+            "title": "Bronchitis",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "cough with mucus",
+                "chest discomfort",
+                "shortness of breath"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "sore_throat",
+        "text": "Sore throat is pain or irritation in the throat that worsens when swallowing. Often a symptom of a viral or bacterial infection. Gargling warm salt water and rest can help.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "ENT Problems",
+            "title": "Sore Throat",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "throat pain",
+                "difficulty swallowing",
+                "irritation"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "tonsillitis",
+        "text": "Tonsillitis is inflammation of the tonsils, typically from viral or bacterial infections. Causes sore throat and swollen lymph nodes. Rest and fluids are mainstays of home care.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "ENT Problems",
+            "title": "Tonsillitis",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "swollen tonsils",
+                "throat pain",
+                "fever",
+                "difficulty swallowing"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "migraine",
+        "text": "Migraine causes severe throbbing pain, usually on one side. Often includes nausea and light sensitivity. Identifying triggers like stress or certain foods is vital for management.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "Neurological",
+            "title": "Migraine",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "throbbing pain",
+                "nausea",
+                "light sensitivity",
+                "aura"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "dizziness_symptom",
+        "text": "Dizziness includes lightheadedness or a spinning sensation. Can be caused by dehydration, low sugar, or inner ear issues. Sitting down immediately and hydration help in the moment.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "General Symptoms",
+            "title": "Dizziness",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "lightheadedness",
+                "loss of balance",
+                "spinning sensation"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "fatigue_symptom",
+        "text": "Fatigue is extreme exhaustion that doesn't resolve with sleep. Can be due to physical illness, mental stress, or poor nutrition. Seeking the cause is key to recovery.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "General Symptoms",
+            "title": "Fatigue",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "exhaustion",
+                "weakness",
+                "lack of energy"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "nausea_symptom",
+        "text": "Nausea is the feeling of having an urge to vomit. Can be caused by many factors like stomach upsets or motion sickness. Resting the stomach and clear fluids help management.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "General Symptoms",
+            "title": "Nausea",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "urge to vomit",
+                "queasiness",
+                "stomach discomfort"
+            ],
+            "severity": "mild",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "vomiting_symptom",
+        "text": "Vomiting is the forceful expulsion of stomach content. Often a symptom of specialized conditions like food poisoning. Hydration is the most critical management step.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "General Symptoms",
+            "title": "Vomiting",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "stomach emptying",
+                "nausea",
+                "dehydration"
+            ],
+            "severity": "moderate",
+            "intent": "symptom_explanation"
+        }
+    },
+    {
+        "id": "dehydration_symptom",
+        "text": "Dehydration is lack of sufficient body fluids. Symptoms include extreme thirst and dark urine. Drinking water or ORS is necessary. Severe cases are medical emergencies.",
+        "metadata": {
+            "dataset": "common_diseases",
+            "role": "PatientEducation",
+            "category": "General Symptoms",
+            "title": "Dehydration",
+            "source": "General Medical Knowledge",
+            "symptom_keywords": [
+                "thirst",
+                "dark urine",
+                "dry mouth",
+                "faintness"
+            ],
+            "severity": "high",
+            "intent": "symptom_explanation"
+        }
+    }
+]

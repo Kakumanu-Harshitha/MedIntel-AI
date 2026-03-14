@@ -29,6 +29,4 @@ torch
 torchvision
 torchaudio
 timm
-transformers
-sentence-transformers
 open-clip-torch

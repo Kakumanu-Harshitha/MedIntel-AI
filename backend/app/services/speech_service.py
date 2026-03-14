@@ -13,9 +13,9 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 groq_client = None
 if GROQ_API_KEY:
     groq_client = Groq(api_key=GROQ_API_KEY)
-    print("✅ Groq client for Speech-to-Text initialized.")
+    print("[OK] Groq client for Speech-to-Text initialized.")
 else:
-    print("⚠️ WARNING: GROQ_API_KEY not found! Speech-to-Text service will be disabled.")
+    print("[WARNING] GROQ_API_KEY not found! Speech-to-Text service will be disabled.")
 
 STT_MODEL = "whisper-large-v3"
 
@@ -37,7 +37,7 @@ def speech_to_text(audio_file: UploadFile) -> str:
         )
         return transcription.text
     except Exception as e:
-        print(f"❌ ERROR: Groq STT API call failed. Error: {e}")
+        print(f"[ERROR] Groq STT API call failed. Error: {e}")
         return f"[stt_error] {e}"
 
 def text_to_speech(text: str, output_dir: str = None) -> str:
@@ -69,6 +69,6 @@ def text_to_speech(text: str, output_dir: str = None) -> str:
         
         return filename
     except Exception as e:
-        print(f"❌ TTS Error: {e}")
+        print(f"[ERROR] TTS Error: {e}")
         return None
 

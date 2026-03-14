@@ -60,9 +60,8 @@ class UnifiedPipeline:
         # 3. Safety Layer
         safety_flag = self.validator.safety_check(updated_state)
 
-        # 4. Readiness Check
-        # RELAXED READINESS: If we have symptoms and duration, we proceed even if only 1 symptom
-        is_ready = bool(updated_state.symptoms) and bool(updated_state.duration)
+        # 4. Readiness Check - Sync with ClinicalValidator
+        is_ready = self.validator.is_ready(updated_state)
 
         # 5. Clinical Matching and Confidence Scoring
         matches = self.validator.match_conditions(updated_state.symptoms)
@@ -96,6 +95,8 @@ class UnifiedPipeline:
         elif route == ExecutionEngine.FOLLOW_UP:
             response_data = await self._generate_llm_follow_up(updated_state)
             session.last_question = response_data.get("last_question") or response_data.get("advice")
+            # Sync pending_field to state so Follow-Up Resolver can catch short answers
+            updated_state.pending_field = (response_data.get("last_question") or "").lower()
         elif route == ExecutionEngine.RULE_BASED:
             response_data = self._execute_rule_based(updated_state, matches)
             session.last_question = None
@@ -110,15 +111,11 @@ class UnifiedPipeline:
         if route in [ExecutionEngine.RULE_BASED, ExecutionEngine.RAG, ExecutionEngine.LLM]:
             # Use specific validator rules
             if not self.validator.validate_response(updated_state, possible_conditions):
-                if len(updated_state.symptoms) == 1 and updated_state.duration:
-                    # Special Case: Single symptom + duration is actually enough for a basic but specific analysis
-                    pass 
-                else:
-                    response_data = await self._generate_llm_follow_up(updated_state)
-                    # Don't overwrite advice if it's already a specific question
-                    if not response_data["advice"] or response_data["advice"] == "READY":
-                        response_data["advice"] = "Symptoms are insufficient for a clear assessment. Please consult a doctor."
-                    session.last_question = response_data["advice"]
+                response_data = await self._generate_llm_follow_up(updated_state)
+                # Don't overwrite advice if it's already a specific question
+                if not response_data["advice"] or response_data["advice"] == "READY":
+                    response_data["advice"] = "Symptoms are insufficient for a clear assessment. Please consult a doctor."
+                session.last_question = response_data["advice"]
 
         # 10. Generate Audio (TTS)
         try:
@@ -189,17 +186,22 @@ class UnifiedPipeline:
     async def _generate_llm_follow_up(self, state: ClinicalState) -> Dict[str, Any]:
         question = None
         qtype = None
-        if not state.duration:
-            question = "How long have you been experiencing these symptoms?"
+        
+        current_symptoms = ", ".join(state.symptoms) if state.symptoms else ""
+        
+        if not state.symptoms:
+            question = "Could you tell me more about the symptoms you're experiencing? For example, where is the pain or discomfort located?"
+            qtype = "SYMPTOMS"
+        elif not state.duration:
+            question = f"How long have you been experiencing {current_symptoms if len(state.symptoms) > 1 else 'this '+state.symptoms[0]}? (e.g., since this morning, 3 days, etc.)"
             qtype = "DURATION"
-        elif not state.symptoms:
-            question = "What symptoms are you experiencing?"
+        elif len(state.symptoms) < 2:
+            # We have 1 symptom + duration, but we need more to be confident
+            question = f"Besides the {state.symptoms[0]}, do you have any other symptoms like fever, dizziness, or changes in your appetite?"
             qtype = "SYMPTOMS"
         else:
-            # If we have 1 symptom + duration, we should ideally NOT be here anymore 
-            # as process_request handles single-symptom 'readiness'.
-            # This is a safety fallback.
-            question = "Do you have any other symptoms, or is it just the " + (state.symptoms[0] if state.symptoms else "symptom") + "?"
+            # Fallback if somehow called when theoretically ready
+            question = "Could you provide any more details about your symptoms or overall health?"
             qtype = "SYMPTOMS"
 
         return {
@@ -207,10 +209,10 @@ class UnifiedPipeline:
             "symptoms": state.symptoms,
             "duration": state.duration,
             "possible_conditions": [],
-            "reason": "Gathering more clinical context.",
+            "reason": "Gathering more clinical context to ensure a safe and accurate assessment.",
             "advice": question,
             "last_question": qtype,
-            "when_to_see_doctor": "If symptoms worsen.",
+            "when_to_see_doctor": "If symptoms worsen significantly or if you develop red flags like chest pain or difficulty breathing.",
             "disclaimer": "This is informational only and not a medical diagnosis."
         }
 
@@ -238,7 +240,7 @@ class UnifiedPipeline:
         knowledge_context = ""
         if route == ExecutionEngine.RAG or (route == ExecutionEngine.LLM and state.symptoms):
             search_term = state.symptoms[0] if state.symptoms else "general symptoms"
-            print(f"🔍 [UnifiedPipeline] RAG Search for: {search_term}")
+            print(f"[UnifiedPipeline] RAG Search for: {search_term}")
             results = self.rag.search(f"{search_term} causes and duration", top_k=3)
             if results:
                 knowledge_context = "\n".join([f"- {r['title']}: {r['text'][:300]}" for r in results])
@@ -281,9 +283,9 @@ PATIENT STATE:
 {context_block}
 
 CRITICAL RULES:
-1. Provide a SPECIFIC and CLINICALLY SOUND analysis.
-2. If only one symptom is present (e.g., "headache") and duration is present (e.g., "5 days"), explain potential causes for THAT specific symptom+duration combination.
-3. NEVER output generic disclaimers like "limited information" or "challenging to offer specific diagnosis".
+1. Provide a SPECIFIC and CLINICALLY SOUND analysis ONLY if enough detail is present.
+2. If symptoms are vague or only one symptom is present (e.g., just "headache"), prioritze asking for other associated symptoms (e.g., fever, vision changes, etc.) to provide a safer assessment.
+3. NEVER output generic disclaimers like "limited information" or "challenging to offer specific diagnosis" as the final advice. If you need more info, use the 'advice' field to ask for it.
 4. Use the provided MEDICAL KNOWLEDGE (RAG) to ground your reasoning.
 5. If duration is long (e.g., 5 days), emphasize that it warrants attention if not improving.
 6. The 'reason' field MUST explicitly address why these symptoms for this duration are worth noting.

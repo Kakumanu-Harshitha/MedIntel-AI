@@ -238,7 +238,7 @@ OUTPUT FORMAT (STRICT JSON ONLY):
             return ClinicalState(symptoms=final_symptoms, duration=final_duration, severity=final_severity)
             
         except Exception as e:
-            print(f"⚠️ LLM State Update Failed: {e}. Fallback to regex.")
+            print(f"[WARNING] LLM State Update Failed: {e}. Fallback to regex.")
             # Fallback to regex extraction + simple merge
             extracted = self.extract_state(message)
             return self.update_state(current_state, extracted)
@@ -548,7 +548,7 @@ Return ONLY JSON.
                 "confidence": 0.9  # Fixed: routing is determined by Python rules, not LLM
             }
         except Exception as e:
-            print(f"⚠️ Orchestrator Failed: {e}")
+            print(f"[WARNING] Orchestrator Failed: {e}")
             regex_state = self.extract_state(message)
             combined_symptoms = list({*[s.lower() for s in current_state.symptoms], *[s.lower() for s in regex_state.symptoms]})
             return {
@@ -582,7 +582,7 @@ Return ONLY JSON.
         has_symptoms = bool(current_state.symptoms)
         has_duration = bool(current_state.duration)
         if has_symptoms and has_duration:
-            print("✅ Controller (deterministic): State READY")
+            print("[OK] Controller (deterministic): State READY")
             return True, None
 
         # --- LLM path for nuanced judgment ---
@@ -644,7 +644,7 @@ YOUR RESPONSE (one line only, no punctuation after the question mark):"""
                 use_primary=False  # Fast fallback model for controller decisions
             )
             raw_answer = response_text.strip()
-            print(f"🧠 Controller LLM raw: {raw_answer[:120]}")
+            print(f"[LLM] Controller LLM raw: {raw_answer[:120]}")
 
             if raw_answer.upper().startswith("READY"):
                 return True, None
@@ -654,11 +654,11 @@ YOUR RESPONSE (one line only, no punctuation after the question mark):"""
             if clean_q.upper() == "READY":
                 return True, None
 
-            print(f"🧠 Controller clean question: {clean_q}")
+            print(f"[LLM] Controller clean question: {clean_q}")
             return False, clean_q
 
         except Exception as e:
-            print(f"⚠️ Controller LLM failed: {e}. Using deterministic fallback.")
+            print(f"[WARNING] Controller LLM failed: {e}. Using deterministic fallback.")
             # Fallback: ask for the first missing field
             if not has_symptoms:
                 return False, "What symptoms are you experiencing?"
@@ -679,7 +679,7 @@ class SessionRepository:
                 self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
                 self.redis_client.ping() # Check connection
             except Exception as e:
-                print(f"⚠️ Redis connection failed: {e}")
+                print(f"[WARNING] Redis connection failed: {e}")
                 self.redis_client = None
         
         # Initialize MongoDB
@@ -689,7 +689,7 @@ class SessionRepository:
                 self.mongo_db = self.mongo_client[DB_NAME]
                 self.mongo_collection = self.mongo_db["sessions"]
             except Exception as e:
-                print(f"⚠️ MongoDB connection failed: {e}")
+                print(f"[WARNING] MongoDB connection failed: {e}")
                 self.mongo_collection = None
 
     def get_or_create_session(self, session_id: Optional[str] = None) -> Session:
@@ -704,7 +704,7 @@ class SessionRepository:
                 if cached_session:
                     return Session.parse_raw(cached_session)
             except Exception as e:
-                print(f"⚠️ Redis read error: {e}")
+                print(f"[WARNING] Redis read error: {e}")
 
         # 2. Fallback to MongoDB
         if self.mongo_collection is not None:
@@ -716,7 +716,7 @@ class SessionRepository:
                         del mongo_session["_id"]
                     return Session.parse_obj(mongo_session)
             except Exception as e:
-                print(f"⚠️ MongoDB read error: {e}")
+                print(f"[WARNING] MongoDB read error: {e}")
 
         # 3. Create new if not found
         return Session(session_id=session_id)
@@ -730,7 +730,7 @@ class SessionRepository:
             try:
                 self.redis_client.set(f"session:{session.session_id}", session_json, ex=3600)
             except Exception as e:
-                print(f"⚠️ Redis write error: {e}")
+                print(f"[WARNING] Redis write error: {e}")
         
         # 2. Save to MongoDB (Persistent)
         if self.mongo_collection is not None:
@@ -741,7 +741,7 @@ class SessionRepository:
                     upsert=True
                 )
             except Exception as e:
-                print(f"⚠️ MongoDB write error: {e}")
+                print(f"[WARNING] MongoDB write error: {e}")
 
 # Singleton instances
 state_manager = StateManager()

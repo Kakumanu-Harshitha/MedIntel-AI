@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from tqdm import tqdm
 from pinecone import Pinecone, ServerlessSpec
-from sentence_transformers import SentenceTransformer
+from app.utils.embeddings_utils import embed_passage
 import numpy as np
 from dotenv import load_dotenv
 
@@ -21,14 +21,14 @@ class MedicalIngester:
         # Configuration
         self.pinecone_api_key = os.getenv("PINECONE_API_KEY")
         self.pinecone_index_name = os.getenv("PINECONE_INDEX", "medical-memory")
-        self.model_name = "all-mpnet-base-v2"  # 768 dimensions
+        self.model_name = "llama-text-embed-v2" # Hosted inference
         self.chunk_size = 800  # characters
         self.chunk_overlap = 100
         self.similarity_threshold = 0.95
         
         # Initialize components
-        print(f"Loading embedding model: {self.model_name}...")
-        self.model = SentenceTransformer(self.model_name)
+        print(f"Using Pinecone hosted embeddings: {self.model_name}...")
+        # No local model initialization needed
         
         print(f"Initializing Pinecone...")
         self.pc = Pinecone(api_key=self.pinecone_api_key)
@@ -190,8 +190,8 @@ class MedicalIngester:
                     self.stats["duplicates_skipped_hash"] += 1
                     continue
                 
-                # Embed
-                embedding = self.model.encode(chunk).tolist()
+                # Embed via Hosted Inference
+                embedding = embed_passage(chunk)
                 
                 # Level 3 Dedup: Similarity
                 if self.check_similarity(embedding):

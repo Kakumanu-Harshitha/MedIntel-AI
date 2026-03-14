@@ -12,22 +12,8 @@ PINECONE_INDEX = None
 
 try:
     from pinecone import Pinecone, ServerlessSpec
-    from sentence_transformers import SentenceTransformer
+    from app.utils.embeddings_utils import embed_query, embed_passage
     
-    def get_embedding_model():
-        global _EMBEDDING_MODEL
-        if _EMBEDDING_MODEL is None:
-            print("⏳ Loading RAG Embedding Model (all-mpnet-base-v2)...")
-            _EMBEDDING_MODEL = SentenceTransformer('all-mpnet-base-v2')
-            print("✅ RAG Embedding Model loaded.")
-        return _EMBEDDING_MODEL
-
-    # --- COLD START FIX: Eagerly load model at import time ---
-    # This prevents the 20–45s delay on the first real request.
-    print("⏳ Pre-loading embedding model at startup...")
-    get_embedding_model()
-    print("✅ Embedding model pre-loaded.")
-
     # 2. Initialize Pinecone
     api_key = os.getenv("PINECONE_API_KEY")
     index_name = os.getenv("PINECONE_INDEX", "health-assistant-medical-knowledge")
@@ -41,7 +27,7 @@ try:
             print(f"Creating Pinecone index: {index_name}...")
             pc.create_index(
                 name=index_name,
-                dimension=768, # Output dimension of all-mpnet-base-v2
+                dimension=768, # Output dimension of llama-text-embed-v2 (matching previous model)
                 metric="cosine",
                 spec=ServerlessSpec(
                     cloud="aws",
@@ -52,15 +38,19 @@ try:
             
         PINECONE_INDEX = pc.Index(index_name)
         RAG_ENABLED = True
-        print(f"✅ Pinecone Index '{index_name}' connected.")
+        print(f"DONE: Pinecone Index '{index_name}' connected (Hosted Inference Mode).")
     else:
-        print("⚠️ PINECONE_API_KEY not found. Switching to MOCK RAG MODE (for demo).")
+        print("WARNING: PINECONE_API_KEY not found. Switching to MOCK RAG MODE (for demo).")
         RAG_ENABLED = True # Enable to show UI features
 
 except ImportError:
-    print("⚠️ Missing dependencies: 'pinecone' or 'sentence-transformers'. Run pip install.")
+    print("WARNING: Missing dependencies: 'pinecone'. Run pip install.")
 except Exception as e:
-    print(f"❌ RAG Service Initialization Error: {e}")
+    # Use ascii safe print if possible
+    try:
+        print(f"ERROR: RAG Service Initialization Error: {e}")
+    except:
+        print("ERROR: RAG Service Initialization Error (unprintable)")
 
 
 class RAGService:
@@ -69,17 +59,15 @@ class RAGService:
         self.index = PINECONE_INDEX
         self.mock_mode = (PINECONE_INDEX is None)
 
-    @property
-    def model(self):
-        return get_embedding_model()
+    def get_embedding(self, text: str, input_type: str = "query") -> List[float]:
+        """
+        Wrapper for hosted embedding generation.
+        """
+        if input_type == "passage":
+            return embed_passage(text)
+        return embed_query(text)
 
-    def get_embedding(self, text: str) -> List[float]:
-        model = self.model
-        if not model:
-            return []
-        return model.encode(text).tolist()
-
-    def upsert_document(self, doc_id: str, text: str, metadata: Dict[str, Any]):
+    def upsert_document(self, doc_id: str, text: str, metadata: Dict[str, Any], namespace: str = None):
         """
         Upserts a document into Pinecone.
         
@@ -96,12 +84,10 @@ class RAGService:
                     f"Expected values: 'WHO_NHS', 'SNOMED_CT', or 'UMLS'."
                 )
             # Validate dataset value
-            valid_datasets = ['WHO_NHS', 'SNOMED_CT', 'UMLS']
+            valid_datasets = ['WHO_NHS', 'SNOMED_CT', 'UMLS', 'common_diseases', 'MedlinePlus', 'PubMed', 'ICD11_MMS', 'OpenFDA_DDI', 'lab_reference']
             if metadata['dataset'] not in valid_datasets:
-                raise ValueError(
-                    f"Invalid dataset value '{metadata['dataset']}' for document '{doc_id}'. "
-                    f"Must be one of: {valid_datasets}"
-                )
+                # Log a warning instead of raising to avoid blocking ingestion of new valid types
+                print(f"[WARNING] Unknown dataset '{metadata['dataset']}' for document '{doc_id}'. Proceeding.")
         
         if not self.enabled:
             return
@@ -111,10 +97,29 @@ class RAGService:
             return
         
         try:
-            vector = self.get_embedding(text)
-            self.index.upsert(vectors=[(doc_id, vector, metadata)])
+            # Inject text into metadata so it's retrievable
+            metadata["text"] = text
+            
+            vector = self.get_embedding(text, input_type="passage")
+            self.index.upsert(vectors=[(doc_id, vector, metadata)], namespace=namespace)
         except Exception as e:
-            print(f"❌ Upsert Error: {e}")
+            print(f"[ERROR] Upsert Error: {e}")
+
+    def delete_by_filter(self, filter_dict: Dict[str, Any], namespace: str = None):
+        """
+        Deletes documents matching the specified metadata filter.
+        Example: {"dataset": "WHO_NHS"}
+        """
+        if not self.enabled or self.mock_mode:
+            print(f"  - [MOCK] Deletion requested with filter: {filter_dict}")
+            return
+            
+        try:
+            print(f"Deleting documents with filter: {filter_dict}...")
+            self.index.delete(filter=filter_dict, namespace=namespace)
+            print("[OK] Deletion successful.")
+        except Exception as e:
+            print(f"[ERROR] Deletion Error: {e}")
 
     def search(self, query: str, top_k: int = 5, namespace: str = None, filter: Dict = None) -> List[Dict[str, Any]]:
         """
@@ -125,7 +130,7 @@ class RAGService:
             return []
             
         if self.mock_mode:
-            print(f"🔍 [MOCK RAG] Returning trusted demo data for: {query[:30]}...")
+            print(f" [MOCK RAG] Returning trusted demo data for: {query[:30]}...")
             
             # SYMPTOM-AWARE MOCK RESPONSES
             query_lower = query.lower()
@@ -221,7 +226,7 @@ class RAGService:
             return candidates[:top_k]
             
         except Exception as e:
-            print(f"❌ Search Error: {e}")
+            print(f"ERROR: Search Error: {e}")
             return []
 
 rag_service = RAGService()

@@ -4,13 +4,12 @@ import json
 from typing import Any, Dict, List, Tuple
 from app.database.cache import AsyncCache, CacheKeys
 
-from sentence_transformers import SentenceTransformer
+from app.utils.embeddings_utils import embed_query
 from pinecone import Pinecone
 
-_EMB_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "all-mpnet-base-v2")
+_EMB_MODEL_NAME = "llama-text-embed-v2"
 _PINECONE_INDEX = os.getenv("PINECONE_INDEX", "medical-memory")
 
-_emb = SentenceTransformer(_EMB_MODEL_NAME)
 _pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 _index = _pc.Index(_PINECONE_INDEX)
 
@@ -40,7 +39,7 @@ async def embed_text(text: str) -> List[float]:
     hit = await _cache.get(key)
     if hit:
         return json.loads(hit.decode())
-    vec = await asyncio.to_thread(_emb.encode, text)
+    vec = await asyncio.to_thread(embed_query, text)
     await _cache.set(key, json.dumps(vec).encode(), ttl=60 * 60 * 24 * 7)
     return vec
 

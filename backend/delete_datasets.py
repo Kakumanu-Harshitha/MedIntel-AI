@@ -20,12 +20,12 @@ def delete_dataset(dataset_name: str):
     Deletes all vectors with the specified dataset metadata.
     
     Args:
-        dataset_name: One of "WHO_NHS", "SNOMED_CT", "UMLS"
+        dataset_name: One of "WHO_NHS", "SNOMED_CT", "UMLS", "MedlinePlus", "PubMed", "lab_reference", "ICD11_MMS", "OpenFDA_DDI"
     
     Raises:
         ValueError: If dataset_name is not valid
     """
-    VALID_DATASETS = ["WHO_NHS", "SNOMED_CT", "UMLS"]
+    VALID_DATASETS = ["WHO_NHS", "SNOMED_CT", "UMLS", "MedlinePlus", "PubMed", "lab_reference", "ICD11_MMS", "OpenFDA_DDI"]
     
     if dataset_name not in VALID_DATASETS:
         raise ValueError(
@@ -39,7 +39,6 @@ def delete_dataset(dataset_name: str):
     
     if rag_service.mock_mode:
         print(f"[MOCK MODE] Would delete all vectors with dataset='{dataset_name}'")
-        print(f"   ℹ️  In production, this would use: index.delete(filter={{'dataset': '{dataset_name}'}})")
         return
     
     # Confirm deletion
@@ -53,9 +52,8 @@ def delete_dataset(dataset_name: str):
         return
     
     try:
-        # Delete by metadata filter
-        print(f"🗑️  Deleting all vectors with dataset='{dataset_name}'...")
-        rag_service.index.delete(filter={"dataset": dataset_name})
+        # Delete by metadata filter using rag_service method
+        rag_service.delete_by_filter(filter_dict={"dataset": dataset_name})
         print(f"✅ Successfully deleted all vectors with dataset='{dataset_name}'")
         print(f"   ℹ️  Other datasets remain unaffected.")
     except Exception as e:
@@ -69,6 +67,11 @@ def list_datasets():
     print("   - WHO_NHS: Patient education fact sheets from WHO and NHS")
     print("   - SNOMED_CT: Disease and symptom ontology (subset)")
     print("   - UMLS: Unified Medical Language System mappings")
+    print("   - MedlinePlus: Health topic summaries from MedlinePlus")
+    print("   - PubMed: Clinical research abstracts from PubMed")
+    print("   - lab_reference: Lab test reference ranges and explanations")
+    print("   - ICD11_MMS: Clinical taxonomy from ICD-11")
+    print("   - OpenFDA_DDI: Drug-drug interaction profiles from OpenFDA")
     print("\nUsage:")
     print("   python backend/delete_datasets.py <DATASET_NAME>")
 
